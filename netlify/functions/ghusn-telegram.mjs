@@ -64,4 +64,4 @@ export async function handle(req,context={}){
   }catch{return json({ok:true,alert:'failed'});}
 }
 export default handle;
-export const config={path:['/api/ghusn-notice','/api/ghusn-notice-session'],rateLimit:{action:'rate_limit',aggregateBy:'ip',windowSize:60,windowLimit:18}};
+export const config={path:['/api/ghusn-notice','/api/ghusn-notice-session'],rateLimit:{action:'rate_limit',aggregateBy:['ip','domain'],windowSize:60,windowLimit:18}};
