@@ -49,7 +49,7 @@ export async function runDigest({store,token,chatId,url,now=Date.now(),fetcher=s
  return {ok:status.every(Boolean),messages:messages.length,registered:!!url};
 }
 export default async function handler(_req,context){
- if(!context?.deploy?.published)return new Response('Not a published deploy',{status:204});
+ if(!context?.deploy?.published)return new Response(null,{status:204});
  try{
   const result=await runDigest({
    store:getStore('ghusn-free-analytics-v1'),
