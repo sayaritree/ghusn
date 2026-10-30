@@ -1,0 +1,13 @@
+{
+  "name": "ghusn-washaij-analytics",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Privacy-limited, free-tier-friendly Telegram visitor summaries",
+  "dependencies": {
+    "@netlify/blobs": "11.1.7"
+  },
+  "scripts": {
+    "test": "node --test"
+  }
+}
