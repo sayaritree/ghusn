@@ -22,7 +22,7 @@ export async function processUpdate(req,{store,token,chatId,now=Date.now(),sende
  try{const raw=await req.text();if(raw.length>8192)return new Response(null,{status:413});update=JSON.parse(raw);}catch{return new Response(null,{status:400});}
  const msg=update?.message;
  if(String(msg?.chat?.id)!==String(chatId))return new Response('ok',{status:200});
- if(Math.abs(Math.floor(now/1000)-Number(msg.date))>1800)return new Response('ok',{status:200});
+ if(!Number.isFinite(Number(msg?.date))||Math.abs(Math.floor(now/1000)-Number(msg.date))>1800)return new Response('ok',{status:200});
  const cmd=String(msg.text||'').trim().split(/\s+/)[0].replace(/@\w+$/,'').toLowerCase();
  if(!['/today','/week','/help','/start'].includes(cmd))return new Response('ok',{status:200});
  if(cmd==='/help'||cmd==='/start'){
