@@ -99,7 +99,7 @@ function reviewRelations(personId,links,doc){
   const p=state.get(id);p.spouseIds=p.spouseIds.filter(x=>x!==personId);
  }
  root.spouseIds=[...l.spouseIds];
- for(const id of l.spouseIds)if(!state.get(id).spouseIds.includes(personId))state.get(id).spouseIds.push(personId);
+ for(const id of l.spouseIds)if(state.has(id)&&!state.get(id).spouseIds.includes(personId))state.get(id).spouseIds.push(personId);
  for(const p of state.values()){
   if(p.fatherId&&p.fatherId===p.motherId)throw Error('تعارض الأب والأم');
   if(p.fatherId&&state.has(p.fatherId)&&state.get(p.fatherId).gender!=='ولد')throw Error('تعارض في جنس الأب');
