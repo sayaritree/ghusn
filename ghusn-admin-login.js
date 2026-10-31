@@ -62,7 +62,13 @@ function menu(){
    try{
      const obj=JSON.parse(await file.text());
      const records=obj.schema==='ghusn-preview-drafts-v1'?obj.records:
-      obj.schema==='ghusn-admin-export-v1'?obj.drafts:null;
+      obj.schema==='ghusn-admin-export-v1'?obj.drafts:
+      obj.format==='ghusn-local-drafts-v1'&&obj.drafts&&typeof obj.drafts==='object'?
+        Object.values(obj.drafts).filter(x=>x&&/^[0-9]{1,12}$/.test(String(x.personId||''))).map(x=>{
+          const keys=['name','birth','death','father','mother','sons','daughters','brothers','sisters','partners','source','notes'];
+          return {personId:String(x.personId),originalName:String(x.originalName||x.name||''),
+            fields:Object.fromEntries(keys.filter(k=>typeof x[k]==='string').map(k=>[k,x[k]]))};
+        }):null;
      if(!Array.isArray(records))throw Error('هذا الملف ليس نسخة تصدير معتمدة من غُصن');
      if(!confirm('استيراد '+records.length+' تعديلات كمسودات للمراجعة، دون نشرها للزوار؟'))return;
      const res=await request('import',{records});
