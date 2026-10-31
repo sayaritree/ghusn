@@ -36,65 +36,145 @@ function addCss(d){
  if(d.getElementById(STYLE_ID))return;
  var s=d.createElement("style");s.id=STYLE_ID;
  s.textContent=[
- '.ghusn-edit-from-card{display:inline-flex!important;align-items:center;justify-content:center;font:700 13px Tahoma,Arial!important;direction:rtl!important;background:#ecfff4!important;color:#125c3e!important;border:1px solid #86bd9b!important;border-radius:9px!important;padding:9px 12px!important;cursor:pointer!important;margin:8px 4px!important}',
- '.ghusn-edit-from-card:focus-visible{outline:3px solid #1ca26f!important}',
- '#ghusn-inline-editor{position:fixed!important;inset:0!important;z-index:2147483600!important;display:flex!important;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;background:rgba(9,40,28,.48);direction:rtl;font-family:Tahoma,Arial,sans-serif}',
- '#ghusn-inline-editor[hidden]{display:none!important}',
- '#ghusn-inline-editor .gie-panel{background:#fff;color:#1b4334;border-radius:16px;padding:22px;max-width:660px;width:100%;max-height:92vh;overflow:auto;box-shadow:0 16px 65px #11352770;box-sizing:border-box}',
- '#ghusn-inline-editor h2{font-size:19px;margin:0 0 8px}',
- '#ghusn-inline-editor p{font-size:12px;color:#5d6b63;line-height:1.8;margin:7px 0 12px}',
- '#ghusn-inline-editor .gie-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}',
- '#ghusn-inline-editor label{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:700}',
- '#ghusn-inline-editor input,#ghusn-inline-editor textarea{border:1px solid #d5e1d7;background:#fff;border-radius:8px;padding:11px;font:400 14px Tahoma,Arial;direction:rtl;box-sizing:border-box;width:100%;color:#203c31}',
- '#ghusn-inline-editor textarea{min-height:68px;resize:vertical}',
- '#ghusn-inline-editor .gie-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:18px}',
- '#ghusn-inline-editor button{background:#146f4b;color:#fff;border:0;border-radius:8px;padding:10px 14px;font:700 13px Tahoma,Arial;cursor:pointer}',
- '#ghusn-inline-editor button.gie-light{background:#eff4f1;color:#244b38}',
- '#ghusn-inline-editor .gie-review{white-space:pre-wrap;background:#f4f8f5;padding:12px;border-radius:8px;line-height:1.8;font-size:13px}',
- '@media(max-width:560px){#ghusn-inline-editor .gie-grid{grid-template-columns:1fr}}'
+ ".ghusn-edit-from-card{display:inline-flex!important;align-items:center;justify-content:center;font:700 13px Tahoma,Arial!important;direction:rtl!important;background:#ecfff4!important;color:#125c3e!important;border:1px solid #86bd9b!important;border-radius:9px!important;padding:9px 12px!important;cursor:pointer!important;margin:8px 4px!important}",
+ ".ghusn-edit-from-card:focus-visible{outline:3px solid #1ca26f!important}",
+ "#ghusn-inline-editor{position:fixed!important;inset:0!important;z-index:2147483600!important;display:flex!important;align-items:center;justify-content:center;padding:14px;box-sizing:border-box;background:rgba(9,40,28,.42);direction:rtl;font-family:Tahoma,Arial,sans-serif}",
+ "#ghusn-inline-editor[hidden]{display:none!important}",
+ "#ghusn-inline-editor .gie-panel{background:#fff;color:#1b4334;border-radius:16px;padding:20px 22px;max-width:900px;width:100%;max-height:93vh;overflow:auto;box-shadow:0 16px 65px #11352770;box-sizing:border-box}",
+ "#ghusn-inline-editor .gie-header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding-bottom:10px;border-bottom:1px solid #e2ebe5;margin-bottom:14px}",
+ "#ghusn-inline-editor h2{font-size:19px;line-height:1.4;margin:0;color:#20563e}",
+ "#ghusn-inline-editor .gie-person-title{font-size:12px;color:#627668;margin:5px 0 0}",
+ "#ghusn-inline-editor .gie-row{display:grid;gap:12px;margin-bottom:12px;align-items:start}",
+ "#ghusn-inline-editor .gie-row-first{grid-template-columns:minmax(0,2.6fr) minmax(105px,.9fr) minmax(105px,.9fr)}",
+ "#ghusn-inline-editor .gie-row-half{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}",
+ "#ghusn-inline-editor .gie-row-fifth{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)}",
+ "#ghusn-inline-editor .gie-row-notes{grid-template-columns:1fr;margin-bottom:8px}",
+ "#ghusn-inline-editor .gie-field{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:700;min-width:0}",
+ "#ghusn-inline-editor .gie-field>span{color:#29553e}",
+ "#ghusn-inline-editor input,#ghusn-inline-editor textarea{border:1px solid #d5e1d7;background:#fff;border-radius:8px;padding:9px 10px;font:400 13px Tahoma,Arial,sans-serif;direction:rtl;box-sizing:border-box;width:100%;color:#203c31;min-width:0}",
+ "#ghusn-inline-editor .gie-short-date input{font-size:12px;text-align:center;padding-left:5px;padding-right:5px;font-variant-numeric:tabular-nums}",
+ "#ghusn-inline-editor .gie-relations textarea{min-height:49px;resize:vertical;line-height:1.7}",
+ "#ghusn-inline-editor .gie-row-notes textarea{min-height:72px;resize:vertical}",
+ "#ghusn-inline-editor .gie-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:13px}",
+ "#ghusn-inline-editor .gie-actions-end{display:flex;align-items:center;gap:8px}",
+ "#ghusn-inline-editor button{background:#146f4b;color:#fff;border:0;border-radius:8px;padding:9px 13px;font:700 12px Tahoma,Arial,sans-serif;cursor:pointer}",
+ "#ghusn-inline-editor button.gie-light{background:#eff4f1;color:#244b38}",
+ "#ghusn-inline-editor .gie-close-top{min-width:30px;min-height:30px;padding:4px 9px;font-size:17px}",
+ "#ghusn-inline-editor .gie-review{white-space:pre-wrap;background:#f4f8f5;padding:12px;border-radius:8px;line-height:1.9;font-size:12px;margin-top:10px;border:1px solid #d8eadf}",
+ "#ghusn-inline-editor .gie-footnote{font-size:11px;line-height:1.7;color:#687e70;margin:4px 0 0}",
+ "@media(max-width:650px){#ghusn-inline-editor .gie-row-first{grid-template-columns:minmax(0,1fr) minmax(90px,.65fr) minmax(90px,.65fr)}#ghusn-inline-editor .gie-panel{padding:14px}#ghusn-inline-editor .gie-row{gap:8px}}",
+ "@media(max-width:420px){#ghusn-inline-editor .gie-row-first{grid-template-columns:1fr 1fr}#ghusn-inline-editor .gie-row-first .gie-full-name{grid-column:1/-1}#ghusn-inline-editor .gie-row-half,#ghusn-inline-editor .gie-row-fifth{grid-template-columns:1fr}#ghusn-inline-editor{padding:8px}}"
  ].join("\n");d.head.appendChild(s);
 }
 function edit(card,d,w){
  var person=refOf(card), saved=drafts(w)[person.key]||{};
- var row=(w.GHOSN_ROWS||[]).find(function(p){return String(p.id)===String(person.id)})||{};
+ var allRows=w.GHOSN_ROWS||[], personId=String(person.id||"");
+ var row=allRows.find(function(p){return String(p.id)===personId})||{};
+ var individuals=new Map();
+ allRows.forEach(function(p){if(p.id!=null&&!individuals.has(String(p.id)))individuals.set(String(p.id),p)});
+ function relationName(p){return String(p.name||p.given||"").trim()}
+ var daughters=[],sons=[],brothers=[],sisters=[],partners=[];
+ if(personId){
+   individuals.forEach(function(p){
+     if(String(p.id)===personId)return;
+     if(String(p.fatherId||"")===personId || String(p.motherId||"")===personId){
+       (p.gender==="بنت"?daughters:sons).push(relationName(p));
+     }
+     if((row.fatherId && String(p.fatherId||"")===String(row.fatherId)) ||
+        (row.motherId && String(p.motherId||"")===String(row.motherId))){
+       (p.gender==="بنت"?sisters:brothers).push(relationName(p));
+     }
+   });
+   allRows.forEach(function(p){
+     if(String(p.id)===personId&&p.spouseId){
+       partners.push(individuals.get(String(p.spouseId))?.name||p.spouseName||"");
+     }
+     if(String(p.spouseId||"")===personId){
+       partners.push(relationName(p));
+     }
+   });
+ }
+ function unique(arr){return [...new Set(arr.map(String).map(function(s){return s.trim()}).filter(Boolean))].join("، ")}
+ var initial={
+    name:String(row.name||person.name),
+    birth:String(row.birthH||row.birthG||""),
+    death:String(row.deathH||row.deathG||""),
+    father:String(row.fatherName||""),
+    mother:String(row.motherName||""),
+    sons:unique(sons),daughters:unique(daughters),
+    brothers:unique(brothers),sisters:unique(sisters),
+    partners:unique(partners),source:"",notes:""
+ };
+ var data={};
+ Object.keys(initial).forEach(function(k){data[k]=Object.prototype.hasOwnProperty.call(saved,k)?saved[k]:initial[k]});
  var old=d.getElementById("ghusn-inline-editor");if(old)old.remove();
  var overlay=d.createElement("section");overlay.id="ghusn-inline-editor";
  overlay.setAttribute("role","dialog");overlay.setAttribute("aria-modal","true");
- overlay.innerHTML='<div class="gie-panel"><h2>تحرير بيانات الشخص</h2>'+
- '<p><strong>'+esc(person.name)+'</strong> — تعديل الشخص المحدد من بطاقته في الشجرة.</p>'+
- '<p>معاينة مستقلة: لا تُطبق التغييرات على شجرة غُصن المنشورة. تُحفظ كمسودات محلية فقط.</p>'+
- '<form id="gie-form"><div class="gie-grid">'+
- '<label>الاسم الكامل<input name="name" required value="'+esc(saved.name||person.name)+'"></label>'+
- '<label>تاريخ الميلاد<input name="birth" placeholder="هجري أو ميلادي" value="'+esc(saved.birth||row.birthH||row.birthG||"")+'"></label>'+
- '<label>تاريخ الوفاة<input name="death" placeholder="إن كان معروفًا" value="'+esc(saved.death||row.deathH||row.deathG||"")+'"></label>'+
- '<label>الأب — طلب ربط أو تصحيح<input name="father" placeholder="الأب المطلوب" value="'+esc(saved.father||row.fatherName||"")+'"></label>'+
- '<label>الأم — طلب ربط أو تصحيح<input name="mother" placeholder="الأم المطلوبة" value="'+esc(saved.mother||row.motherName||"")+'"></label>'+
- '<label>مصدر المعلومة<input name="source" placeholder="مرجع التوثيق" value="'+esc(saved.source||"")+'"></label>'+
- '</div><label style="margin-top:12px">ملاحظات إضافية<textarea name="notes">'+esc(saved.notes||"")+'</textarea></label>'+
- '<div class="gie-review" id="gie-review" hidden></div>'+
- '<div class="gie-actions"><button type="button" id="gie-review-button">ماذا عدّلت؟ — مراجعة</button>'+
- '<button type="submit">حفظ المسودة</button><button type="button" id="gie-close" class="gie-light">إغلاق</button></div></form></div>';
+ overlay.setAttribute("aria-label","تحرير بيانات الشخص");
+ function textInput(label,key,extra,placeholder){
+   return '<label class="gie-field '+(extra||'')+'"><span>'+label+'</span><input name="'+key+'" value="'+esc(data[key])+'" '+(key==='name'?'required ':'')+'placeholder="'+esc(placeholder||"")+'"></label>';
+ }
+ function area(label,key,rows,extra){
+   return '<label class="gie-field '+(extra||'')+'"><span>'+label+'</span><textarea name="'+key+'" rows="'+rows+'">'+esc(data[key])+'</textarea></label>';
+ }
+ overlay.innerHTML='<div class="gie-panel">'+
+ '<div class="gie-header"><div><h2>تحرير بيانات الشخص</h2><p class="gie-person-title">'+esc(person.name)+'</p></div>'+
+ '<button type="button" class="gie-light gie-close-top" id="gie-close-top" aria-label="إغلاق بطاقة التحرير">×</button></div>'+
+ '<form id="gie-form">'+
+ '<div class="gie-row gie-row-first">'+
+ textInput("الاسم الكامل","name","gie-full-name","اسم الشخص الكامل")+
+ textInput("تاريخ الولادة","birth","gie-short-date","هـ / م")+
+ textInput("تاريخ الوفاة","death","gie-short-date","هـ / م")+
+ '</div>'+
+ '<div class="gie-row gie-row-half">'+
+ textInput("الأب","father","","اختر أو اكتب اسم الأب")+
+ textInput("الأم","mother","","اختر أو اكتب اسم الأم")+
+ '</div>'+
+ '<div class="gie-row gie-row-half">'+
+ area("الأولاد","sons",2,"gie-relations")+
+ area("البنات","daughters",2,"gie-relations")+
+ '</div>'+
+ '<div class="gie-row gie-row-half">'+
+ area("الإخوان","brothers",2,"gie-relations")+
+ area("الأخوات","sisters",2,"gie-relations")+
+ '</div>'+
+ '<div class="gie-row gie-row-fifth">'+
+ area("الزوج / الزوجة","partners",2,"gie-relations")+
+ textInput("المصدر","source","","مرجع المعلومة")+
+ '</div>'+
+ '<div class="gie-row gie-row-notes">'+area("ملاحظة","notes",3,"")+'</div>'+
+ '<p class="gie-footnote">تعديل أسماء الأقارب يُحفظ كطلب مراجعة، ولا يغيّر روابط النسب تلقائيًا. جميع التعديلات مسودات تجريبية غير منشورة.</p>'+
+ '<div id="gie-review" class="gie-review" hidden></div>'+
+ '<div class="gie-actions"><button type="button" id="gie-review-button" class="gie-light">ماذا عدّلت؟</button>'+
+ '<div class="gie-actions-end"><button type="button" id="gie-close" class="gie-light">إغلاق</button>'+
+ '<button type="submit" id="gie-save">حفظ المسودة</button></div></div>'+
+ '</form></div>';
  d.body.appendChild(overlay);
  var form=overlay.querySelector("#gie-form");
  function values(){return Object.fromEntries(new w.FormData(form).entries())}
  function close(){overlay.remove()}
  overlay.querySelector("#gie-close").onclick=close;
+ overlay.querySelector("#gie-close-top").onclick=close;
  overlay.onmousedown=function(e){if(e.target===overlay)close()};
+ var reviewer=overlay.querySelector("#gie-review");
  overlay.querySelector("#gie-review-button").onclick=function(){
-   var val=values(), box=overlay.querySelector("#gie-review"), labels={name:"الاسم",birth:"الميلاد",death:"الوفاة",father:"الأب",mother:"الأم",source:"المصدر",notes:"ملاحظات"};
-   var changes=Object.keys(labels).filter(function(k){return String(val[k]||"")!==String(saved[k]||(k==="name"?person.name:""))})
-   .map(function(k){return labels[k]+": "+(val[k]||"—")});
-   box.hidden=false;box.textContent=changes.join("\n")||"لا توجد تغييرات جديدة";
+   var v=values(),labels={name:"الاسم الكامل",birth:"تاريخ الولادة",death:"تاريخ الوفاة",father:"الأب",mother:"الأم",
+     sons:"الأولاد",daughters:"البنات",brothers:"الإخوان",sisters:"الأخوات",partners:"الزوج / الزوجة",source:"المصدر",notes:"ملاحظة"};
+   var changes=Object.keys(labels).filter(function(k){return String(v[k]||"")!==String(initial[k]||"")})
+     .map(function(k){return labels[k]+": "+(v[k]||"—")});
+   reviewer.hidden=false;
+   reviewer.textContent=changes.length?"التغييرات المطلوب مراجعتها:\n"+changes.join("\n"):"لا توجد تغييرات عن البيانات الأصلية.";
  };
  form.onsubmit=function(e){
    e.preventDefault();
-   var val=values(),all=drafts(w);if(!String(val.name||"").trim())return;
-   all[person.key]=Object.assign({},val,{originalName:person.name,personId:person.id||null,
+   var v=values(),all=drafts(w);if(!String(v.name||"").trim())return;
+   all[person.key]=Object.assign({},v,{originalName:person.name,personId:person.id||null,
       context:person.context,status:"draft",updatedAt:new Date().toISOString()});
-   try{w.localStorage.setItem(STORE,JSON.stringify(all))}catch(err){w.alert("تعذّر حفظ المسودة. لم تتغير الشجرة.");return}
+   try{w.localStorage.setItem(STORE,JSON.stringify(all))}
+   catch(err){w.alert("تعذّر حفظ المسودة في هذا المتصفح؛ لم تتغير بيانات الشجرة.");return}
    var button=card.querySelector(".ghusn-edit-from-card");
    if(button)button.textContent="✎ تحرير بياناته — مسودة محفوظة";
-   close();w.alert("حُفظت المسودة فقط؛ لم يتغير الموقع المنشور.");
+   close();w.alert("حُفظت المسودة المحلية فقط. لم تتغير بيانات الموقع المنشور.");
  };
  var focus=overlay.querySelector('input[name="name"]');if(focus)focus.focus();
 }
