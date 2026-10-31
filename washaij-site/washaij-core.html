@@ -548,6 +548,30 @@ const search=$('#search'), suggestions=$('#suggestions'); let found=[]; function
 search.addEventListener('input',updateSearch); search.addEventListener('keydown',evt=>{if(evt.key==='Enter'&&found.length){evt.preventDefault();navigate(found[0].id);}if(evt.key==='Escape')suggestions.classList.remove('active');}); document.addEventListener('click',evt=>{if(!evt.target.closest('.search-wrap'))suggestions.classList.remove('active');});
 const initial=decodeURIComponent((location.hash.match(/person=([^&]+)/)||[])[1]||'38'); if(people.has(initial))focusId=initial; selectedId=focusId; render(); $('#back').disabled=true;
 window.GHOSN_BRIDGE = Object.freeze({ navigate, person, getFocusId:()=>focusId, getView:()=>({...view}), setView:(next)=>{view={...view,...next};syncView();}, getLayout:()=>window.__GHOSN_DEBUG__?.layout });
+window.GHOSN_APPLY_APPROVED = function(items){
+  if(!Array.isArray(items))return 0;
+  const known=new Map();
+  for(const rec of items){
+    const id=String(rec.personId||''),p=people.get(id),f=rec.fields||{};
+    if(!p||p.external||!/^[0-9]{1,12}$/.test(id))continue;
+    if(typeof f.name==='string'&&f.name.trim())p.name=f.name.trim();
+    if(typeof f.birth==='string'){p.birthH=f.birth.trim();p.birthG='';}
+    if(typeof f.death==='string'){p.deathH=f.death.trim();p.deathG='';}
+    for(const row of RAW){
+      if(String(row.id)!==id)continue;
+      if(typeof f.name==='string'&&f.name.trim())row.name=f.name.trim();
+      if(typeof f.birth==='string'){row.birthH=f.birth.trim();row.birthG='';}
+      if(typeof f.death==='string'){row.deathH=f.death.trim();row.deathG='';}
+    }
+    known.set(id,{
+      source:typeof f.source==='string'?f.source:'',
+      notes:typeof f.notes==='string'?f.notes:''
+    });
+  }
+  window.GHOSN_PUBLIC_EXTRA = known;
+  if(known.size)render();
+  return known.size;
+};
 })();
 </script>
 <script id="ghosnEnhancedScript">
@@ -603,7 +627,7 @@ window.GHOSN_BRIDGE = Object.freeze({ navigate, person, getFocusId:()=>focusId, 
  function showDetailField(label,value){if(!value)return;const box=document.createElement('div');box.className='ghosn-detail';const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=label;dd.textContent=value;box.append(dt,dd);$('ghosnDetailGrid').append(box);}
  function openDetails(pid){const p=api.person(pid);if(!p||p.external){return;}selectedForDetails=pid;window.__GHUSN_DETAIL_PERSON_ID=String(pid);lastFocused=document.activeElement;$('ghosnDetailTitle').textContent=p.name;$('ghosnDetailGrid').replaceChildren();showDetailField('الحالة',p.lifeStatus||'');showDetailField('الأب',p.fatherName|| (p.fatherId?displayName(p.fatherId):''));showDetailField('الأم',p.motherName|| (p.motherId?displayName(p.motherId):''));
    const partners=new Set(rows.filter(r=>String(r.id)===String(pid)&&r.spouseId).map(r=>String(r.spouseId)));for(const r of rows)if(String(r.spouseId||'')===String(pid))partners.add(String(r.id));if(partners.size)showDetailField('الأزواج / الزوجات الموثقون',Array.from(partners).map(displayName).join('، '));
-   const kids=[...people.values()].filter(k=>String(k.fatherId||'')===String(pid)||String(k.motherId||'')===String(pid));if(kids.length)showDetailField('الأبناء في البيانات',kids.map(c=>c.given||c.name).join('، '));
+   const kids=[...people.values()].filter(k=>String(k.fatherId||'')===String(pid)||String(k.motherId||'')===String(pid));if(kids.length)showDetailField('الأبناء في البيانات',kids.map(c=>c.given||c.name).join('، '));const publicExtra=window.GHOSN_PUBLIC_EXTRA?.get(String(pid));if(publicExtra){showDetailField('المصدر',publicExtra.source);showDetailField('ملاحظة',publicExtra.notes);}
    if(p.birthH||p.birthG)showDetailField('الميلاد',[(p.birthH?`${p.birthH} هـ`:'') ,(p.birthG?`${p.birthG} م`:'')].filter(Boolean).join(' | '));if(p.deathH||p.deathG)showDetailField('الوفاة',[(p.deathH?`${p.deathH} هـ`:'') ,(p.deathG?`${p.deathG} م`:'')].filter(Boolean).join(' | '));
    showDetailField('تاريخ الولادة المُضاف',p.adminBirth||'');showDetailField('تاريخ الوفاة المُضاف',p.adminDeath||'');showDetailField('المصدر',p.source||'');showDetailField('ملاحظة',p.notes||'');if(! $('ghosnDetailGrid').children.length)showDetailField('البيانات','لا توجد بيانات تفصيلية إضافية لهذا الشخص.');modal.hidden=false;$('ghosnDetailClose').focus();}
  function closeDetails(){if(modal.hidden)return;modal.hidden=true;selectedForDetails=null;window.__GHUSN_DETAIL_PERSON_ID=null;if(lastFocused?.isConnected)lastFocused.focus();}
@@ -848,6 +872,21 @@ if(document.body.classList.contains('ghosn-enhanced'))sync();
       }catch(_e){}
       window.top.location.href='https://sayaritree.netlify.app/';
     });
+  }
+})();
+</script>
+
+<script>
+(async function loadApprovedWashaijDetails(){
+  try {
+    const resp=await fetch('/.netlify/functions/ghusn-admin?action=public',{credentials:'omit',cache:'no-store'});
+    if(!resp.ok)return;
+    const data=await resp.json();
+    if(data.schema==='washaij-approved-public-v1' && Array.isArray(data.items)){
+      window.GHOSN_APPLY_APPROVED?.(data.items);
+    }
+  }catch(_err){
+    // The original approved family tree remains visible if this optional API is unavailable.
   }
 })();
 </script>
