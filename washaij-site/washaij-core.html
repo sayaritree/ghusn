@@ -559,7 +559,7 @@ window.GHOSN_APPLY_RELATIONS=function(data){
    const base=kinshipBaseline.get(id),ov=data.overrides[id]||{};
    p.fatherId=Object.prototype.hasOwnProperty.call(ov,'fatherId')?String(ov.fatherId||''):base.fatherId;
    p.motherId=Object.prototype.hasOwnProperty.call(ov,'motherId')?String(ov.motherId||''):base.motherId;
-   p.spouseIds=Array.isArray(ov.spouseIds)?ov.spouseIds.filter(x=>people.has(String(x))).map(String):[...base.spouseIds];
+   p.spouseIds=Array.isArray(ov.spouseIds)?ov.spouseIds.map(String):[...base.spouseIds];
    p.lineageType=['marriage','biological','care','unknown'].includes(ov.lineageType)?ov.lineageType:'marriage';
  }
  for(const [id,p] of people){
@@ -570,7 +570,7 @@ window.GHOSN_APPLY_RELATIONS=function(data){
  for(const original of kinshipBaseRows){
    const r=original.row,p=people.get(String(r.id));
    if(!p)continue;
-   r.fatherId=p.fatherId;r.motherId=p.motherId;
+   r.fatherId=p.fatherId;r.motherId=p.motherId;r.lineageType=p.lineageType;
    r.fatherName=p.fatherName;r.motherName=p.motherName;
    r.spouseId='';r.spouseName='';
  }
