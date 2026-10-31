@@ -404,9 +404,35 @@ main{flex:1;min-height:0}.tree-section{position:relative;height:100%;width:100%;
     return data;
   }
 
+  async function applyApproved(data){
+    // Approved-only overlays. If the read fails, retain the original genealogy intact.
+    if(!data||!Array.isArray(data.people)||location.protocol==='file:')return data;
+    try{
+      const r=await fetch('/.netlify/functions/ghusn-approved',{cache:'no-store'});
+      if(!r.ok)return data;
+      const body=await r.json();
+      if(!Array.isArray(body.approved))return data;
+      const byId=new Map(data.people.map(p=>[String(p.id),p]));
+      for(const item of body.approved){
+        const p=byId.get(String(item.personId)), f=item.fields||{};
+        if(!p)continue;
+        if(typeof f.name==='string'&&f.name.trim()){
+          p.name=f.name.trim();
+          p.displayName=f.name.trim();
+          p.fullNameOverride=f.name.trim();
+        }
+        if(typeof f.birth==='string')p.birthH=f.birth;
+        if(typeof f.death==='string')p.deathH=f.death;
+        if(typeof f.source==='string')p.source=f.source;
+        if(typeof f.notes==='string')p.notes=f.notes;
+      }
+    }catch(e){console.warn('Ghusn approved data unavailable; retaining base tree')}
+    return data;
+  }
+
   async function prepare() {
     if (prepared) return global.GhusnFamily;
-    const data = verifyData(await loadData());
+    const data = verifyData(await applyApproved(await loadData()));
     global.GHUSN_DATA = data;
     if (!global.GhusnFamily) {
       for (const file of LIBRARIES) await importScript(file);
