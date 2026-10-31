@@ -1,7 +1,7 @@
 # Deployment-only branch for the independent WASHAIJ site.
 # The published directory contains only Washaij and its admin assets.
 [build]
-  command = "node --test tests/washaij-editor.test.mjs"
+  command = "node scripts/sync-washaij-roster.mjs && node --test tests/washaij-editor.test.mjs"
   publish = "washaij-site"
 
 [functions]
