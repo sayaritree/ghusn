@@ -25,7 +25,7 @@ function personCard(d,w){
  return null;
 }
 function refOf(card){
- var n=nameOf(card),id="", nodes=[card,card.querySelector("[data-person-id]"),card.querySelector("[data-personid]"),card.querySelector("[data-node-id]")];
+ var n=nameOf(card),id=String((card.ownerDocument.defaultView||{}).__GHUSN_DETAIL_PERSON_ID||""), nodes=[card,card.querySelector("[data-person-id]"),card.querySelector("[data-personid]"),card.querySelector("[data-node-id]")];
  nodes.forEach(function(el){if(el&&!id)id=el.getAttribute("data-person-id")||el.getAttribute("data-personid")||el.getAttribute("data-node-id")||""});
  var context=(card.innerText||card.textContent||"").replace(/\s+/g," ").slice(0,250);
  return {name:n,id:id,key:id?"id:"+id:"name:"+n+"|"+context.slice(0,120),context:context};
@@ -54,6 +54,7 @@ function addCss(d){
 }
 function edit(card,d,w){
  var person=refOf(card), saved=drafts(w)[person.key]||{};
+ var row=(w.GHOSN_ROWS||[]).find(function(p){return String(p.id)===String(person.id)})||{};
  var old=d.getElementById("ghusn-inline-editor");if(old)old.remove();
  var overlay=d.createElement("section");overlay.id="ghusn-inline-editor";
  overlay.setAttribute("role","dialog");overlay.setAttribute("aria-modal","true");
@@ -62,10 +63,10 @@ function edit(card,d,w){
  '<p>معاينة مستقلة: لا تُطبق التغييرات على شجرة غُصن المنشورة. تُحفظ كمسودات محلية فقط.</p>'+
  '<form id="gie-form"><div class="gie-grid">'+
  '<label>الاسم الكامل<input name="name" required value="'+esc(saved.name||person.name)+'"></label>'+
- '<label>تاريخ الميلاد<input name="birth" placeholder="هجري أو ميلادي" value="'+esc(saved.birth||"")+'"></label>'+
- '<label>تاريخ الوفاة<input name="death" placeholder="إن كان معروفًا" value="'+esc(saved.death||"")+'"></label>'+
- '<label>الأب — طلب ربط أو تصحيح<input name="father" placeholder="الأب المطلوب" value="'+esc(saved.father||"")+'"></label>'+
- '<label>الأم — طلب ربط أو تصحيح<input name="mother" placeholder="الأم المطلوبة" value="'+esc(saved.mother||"")+'"></label>'+
+ '<label>تاريخ الميلاد<input name="birth" placeholder="هجري أو ميلادي" value="'+esc(saved.birth||row.birthH||row.birthG||"")+'"></label>'+
+ '<label>تاريخ الوفاة<input name="death" placeholder="إن كان معروفًا" value="'+esc(saved.death||row.deathH||row.deathG||"")+'"></label>'+
+ '<label>الأب — طلب ربط أو تصحيح<input name="father" placeholder="الأب المطلوب" value="'+esc(saved.father||row.fatherName||"")+'"></label>'+
+ '<label>الأم — طلب ربط أو تصحيح<input name="mother" placeholder="الأم المطلوبة" value="'+esc(saved.mother||row.motherName||"")+'"></label>'+
  '<label>مصدر المعلومة<input name="source" placeholder="مرجع التوثيق" value="'+esc(saved.source||"")+'"></label>'+
  '</div><label style="margin-top:12px">ملاحظات إضافية<textarea name="notes">'+esc(saved.notes||"")+'</textarea></label>'+
  '<div class="gie-review" id="gie-review" hidden></div>'+
@@ -107,14 +108,27 @@ function install(frame){
    card.setAttribute("data-ghusn-admin-card","1");
    var b=d.createElement("button");b.type="button";b.className="ghusn-edit-from-card";
    b.textContent="✎ تحرير بياناته";b.onclick=function(e){e.preventDefault();e.stopPropagation();edit(card,d,w)};
-   card.appendChild(b);
+   var footer=card.querySelector(".ghosn-modal-footer"); if(footer)footer.insertBefore(b,footer.firstChild);else card.appendChild(b);
  }
  function schedule(){if(!pending){pending=true;w.requestAnimationFrame(inspect)}}
  var observer=new w.MutationObserver(schedule);
  observer.observe(d.body,{subtree:true,childList:true,attributes:true,attributeFilter:["style","class","hidden","open"]});
  d.addEventListener("click",schedule,true);schedule();
+ function scanNested(){
+  var frames=d.querySelectorAll("iframe#ws-frame");
+  frames.forEach(function(inner){
+   if(!inner.hasAttribute("data-ghusn-admin-watched")){
+     inner.setAttribute("data-ghusn-admin-watched","1");
+     inner.addEventListener("load",function(){install(inner)});
+   }
+   try{if(inner.contentDocument&&inner.contentDocument.readyState==="complete")install(inner)}catch(e){}
+  });
+ }
+ new w.MutationObserver(scanNested).observe(d.body,{subtree:true,childList:true});
+ scanNested();
 }
 function start(){
+ if(new URLSearchParams(window.location.search).get("ghusnAdminPreview")!=="1")return;
  var frame=document.getElementById("ghusn-app");if(!frame)return;
  frame.addEventListener("load",function(){install(frame)});
  if(frame.contentDocument&&frame.contentDocument.readyState==="complete")install(frame);
