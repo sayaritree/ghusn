@@ -8,11 +8,14 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f4f6f1}
 #ghusn-app{width:100%;height:100%;display:block;border:0;background:#f4f6f1}
 #load-hint{position:fixed;inset:0;display:grid;place-items:center;background:#f4f6f1;color:#164937;font:700 18px Tahoma,Arial;pointer-events:none}
 #load-hint[hidden]{display:none}
+#washaij-preview-note{position:fixed;left:50%;top:7px;transform:translateX(-50%);z-index:35000;direction:rtl;background:#fff9e9;border:1px solid #dbbc78;color:#664b1d;padding:7px 12px;border-radius:12px;max-width:92vw;text-align:center;box-shadow:0 4px 15px #0002;font:700 11px Tahoma,Arial;pointer-events:none}
 </style></head>
-<body><div id="load-hint">وَشَائِج — جارٍ فتح شجرة العلاقات الأسرية…</div>
+<body><div id="washaij-preview-note" hidden>نسخة معاينة — تحرير الأنساب والحفظ المركزي يتفعّلان بعد ربط الحساب الجديد وتعيين كلمة مرور المدير.</div><div id="load-hint">وَشَائِج — جارٍ فتح شجرة العلاقات الأسرية…</div>
 <iframe id="ghusn-app" src="/washaij-core.html" title="وَشَائِج — العلاقات الأسرية" allow="fullscreen"></iframe>
 <script>
 (function(){
+ const note=document.getElementById('washaij-preview-note');
+ if(location.hostname.startsWith('deploy-preview-'))note.hidden=false;
  const frame=document.getElementById('ghusn-app');
  function ready(){document.getElementById('load-hint').hidden=true}
  frame.addEventListener('load',ready);
