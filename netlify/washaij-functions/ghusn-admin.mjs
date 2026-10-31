@@ -68,7 +68,11 @@ function reviewRelations(personId,links,doc){
  const validateId=(id,label,gender)=>{
   if(!id)return;
   const p=state.get(id);
-  if(!p)throw Error(label+': الشخص غير مسجل، ولا يمكن ربطه بالاسم وحده');
+  if(!p){
+    const unchanged=(label==='الأب'&&root.fatherId===id)||(label==='الأم'&&root.motherId===id)||(label==='الزوج / الزوجة'&&root.spouseIds.includes(id));
+    if(!unchanged)throw Error(label+': الشخص غير مسجل، ولا يمكن ربطه بالاسم وحده');
+    return;
+  }
   if(id===personId)throw Error('لا يمكن ربط الشخص بنفسه');
   if(gender&&p.gender!==gender)throw Error(label+': نوع الشخص غير مطابق للصلة');
  };
@@ -98,19 +102,23 @@ function reviewRelations(personId,links,doc){
  for(const id of l.spouseIds)if(!state.get(id).spouseIds.includes(personId))state.get(id).spouseIds.push(personId);
  for(const p of state.values()){
   if(p.fatherId&&p.fatherId===p.motherId)throw Error('تعارض الأب والأم');
-  if(p.fatherId&&state.get(p.fatherId)?.gender!=='ولد')throw Error('تعارض في جنس الأب');
-  if(p.motherId&&state.get(p.motherId)?.gender!=='بنت')throw Error('تعارض في جنس الأم');
+  if(p.fatherId&&state.has(p.fatherId)&&state.get(p.fatherId).gender!=='ولد')throw Error('تعارض في جنس الأب');
+  if(p.motherId&&state.has(p.motherId)&&state.get(p.motherId).gender!=='بنت')throw Error('تعارض في جنس الأم');
   if(p.fatherId===p.id||p.motherId===p.id)throw Error('صلة ذاتية غير صحيحة');
-  const visited=new Set([p.id]),queue=[p.fatherId,p.motherId].filter(Boolean);
-  while(queue.length){
-   const id=queue.shift();
-   if(visited.has(id))throw Error('تعديل النسب يسبب حلقة بين الأجيال');
-   visited.add(id);
-   const a=state.get(id);
-   if(a)queue.push(...[a.fatherId,a.motherId].filter(Boolean));
+  const seen=new Set(),path=new Set();
+  function visitAncestor(id){
+   if(!id||!state.has(id))return;
+   if(path.has(id))throw Error('تعديل النسب يسبب حلقة بين الأجيال');
+   if(seen.has(id))return;
+   path.add(id);
+   const ancestor=state.get(id);
+   visitAncestor(ancestor.fatherId);visitAncestor(ancestor.motherId);
+   path.delete(id);seen.add(id);
   }
+  visitAncestor(p.id);
   for(const spouseId of p.spouseIds){
-   if(spouseId===p.id||!state.has(spouseId))throw Error('ارتباط زوجي غير صالح');
+   if(spouseId===p.id)throw Error('ارتباط زوجي غير صالح');
+   if(!state.has(spouseId))continue; // Legacy external reference retained without inventing identity.
    if(state.get(spouseId).gender===p.gender)throw Error('تعارض في صلة الزوجية');
    if(p.fatherId===spouseId||p.motherId===spouseId)throw Error('لا يمكن ربط الابن بأحد والديه زوجيًا');
   }
