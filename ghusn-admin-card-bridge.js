@@ -217,6 +217,25 @@ function install(frame){
  new w.MutationObserver(scanNested).observe(d.body,{subtree:true,childList:true});
  scanNested();
 }
+function enableDraftExport(){
+ if(document.getElementById("ghusn-export-drafts"))return;
+ var box=document.createElement("div");box.id="ghusn-export-drafts";
+ box.style.cssText="position:fixed;bottom:14px;right:14px;z-index:2147483590;direction:rtl;font:13px Tahoma;background:white;border:1px solid #a8cab8;border-radius:10px;padding:8px;box-shadow:0 3px 16px #183b2928";
+ box.innerHTML='<button type="button" style="border:0;background:#176b49;color:white;border-radius:7px;padding:9px;cursor:pointer;font:700 12px Tahoma">تصدير تعديلات التجربة</button>';
+ box.querySelector("button").onclick=function(){
+  var frame=document.getElementById("ghusn-app"), inner=frame&&frame.contentWindow, nested;
+  try{nested=inner&&inner.document.getElementById("ws-frame");}catch(e){}
+  var win=nested&&nested.contentWindow||inner;
+  var entries=win?drafts(win):{}, count=Object.keys(entries).length;
+  if(!count){window.alert("لا توجد مسودات محفوظة في هذا المتصفح لهذا القسم. افتح قسم وشائج الذي عدلت فيه أولًا.");return}
+  var payload={format:"ghusn-local-drafts-v1",exportedAt:new Date().toISOString(),count:count,drafts:entries};
+  var blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json;charset=utf-8"});
+  var url=URL.createObjectURL(blob),a=document.createElement("a");
+  a.href=url;a.download="غصن_مسودات_التحرير_"+new Date().toISOString().slice(0,10)+".json";
+  a.click();setTimeout(function(){URL.revokeObjectURL(url)},1500);
+ };
+ document.body.appendChild(box);
+}
 function start(){
  if(new URLSearchParams(window.location.search).get("ghusnAdminPreview")!=="1")return;
  var backup=document.createElement('button');
@@ -240,6 +259,7 @@ function start(){
   setTimeout(()=>URL.revokeObjectURL(url),1500);
  };
  document.body.appendChild(backup);
+ enableDraftExport();
  var frame=document.getElementById("ghusn-app");if(!frame)return;
  frame.addEventListener("load",function(){install(frame)});
  if(frame.contentDocument&&frame.contentDocument.readyState==="complete")install(frame);
