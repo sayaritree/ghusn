@@ -140,3 +140,20 @@ test('reject self-links, incompatible parent genders, missing IDs and obsolete r
   const publicData=await call('public');
   assert.deepEqual(publicData.data.relations.overrides,{});
 });
+
+
+test('visual kinship editor binds internal IDs, requires review, and renders exceptions separately',()=>{
+  const editor=readFileSync(new URL('../washaij-site/ghusn-admin-live.js',import.meta.url),'utf8');
+  const core=readFileSync(new URL('../washaij-site/washaij-core.html',import.meta.url),'utf8');
+  assert.ok(editor.includes('gie-father-select'));
+  assert.ok(editor.includes('gie-mother-select'));
+  assert.ok(editor.includes('gie-add-child'));
+  assert.ok(editor.includes('gie-parent-family-preview'));
+  assert.ok(editor.includes("api('review'"));
+  assert.ok(editor.includes('reviewToken'));
+  assert.ok(editor.includes('readonly title='));
+  assert.ok(core.includes('GHOSN_APPLY_RELATIONS'));
+  assert.ok(core.includes('pairs.clear()'));
+  assert.ok(core.includes("kind:'special'"),'Non-marital children must not be drawn under marriage unions');
+  assert.ok(core.includes("g.kind==='other'||g.kind==='special'"),'Special children use distinct dashed lines');
+});
