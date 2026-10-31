@@ -17,6 +17,11 @@ for(const r of rows){
  const person=unique.get(id),spouseId=String(r.spouseId||'');
  if(spouseId&&!person.spouseIds.includes(spouseId))person.spouseIds.push(spouseId);
 }
+// A spouse mentioned only in the other spouse's row is still an explicit
+// source link. Normalize it in both directions before validation.
+for(const p of unique.values())for(const otherId of p.spouseIds){
+ if(unique.has(otherId)&&!unique.get(otherId).spouseIds.includes(p.id))unique.get(otherId).spouseIds.push(p.id);
+}
 if(unique.size<50)throw Error('Abnormally small family source, refuse to regenerate');
 const dest=resolve(root,'netlify/washaij-functions/ghusn-admin.mjs');
 const source=readFileSync(dest,'utf8');
