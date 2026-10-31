@@ -1,0 +1,9 @@
+[build]
+  command = "npm run build"
+  publish = "."
+  functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# Identity verification lives in each function; admin pages alone never grant write permissions.
