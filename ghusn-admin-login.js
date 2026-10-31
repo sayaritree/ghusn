@@ -80,10 +80,12 @@ function unlock(){
  window.dispatchEvent(new Event('ghusn-admin-authenticated'));
 }
 function start(){
- document.body.appendChild(toolbar);
  toolbar.onclick=()=>authenticated?menu():login();
- request('session').then(s=>{if(s.authenticated){authenticated=true;unlock()}})
- .catch(err=>{toolbar.title='تتطلب الإدارة ضبط كلمة مرور المدير في Netlify'});
+ request('session').then(s=>{
+   if(!s.configured)return;
+   document.body.appendChild(toolbar);
+   if(s.authenticated){authenticated=true;unlock()}
+ }).catch(()=>{/* لا تُعرض أدوات إدارة غير مفعلة للزوار */});
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
