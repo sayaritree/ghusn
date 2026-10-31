@@ -421,8 +421,8 @@ main{flex:1;min-height:0}.tree-section{position:relative;height:100%;width:100%;
           p.displayName=f.name.trim();
           p.fullNameOverride=f.name.trim();
         }
-        if(typeof f.birth==='string')p.birthH=f.birth;
-        if(typeof f.death==='string')p.deathH=f.death;
+        if(typeof f.birth==='string')p.adminBirth=f.birth;
+        if(typeof f.death==='string')p.adminDeath=f.death;
         if(typeof f.source==='string')p.source=f.source;
         if(typeof f.notes==='string')p.notes=f.notes;
       }
@@ -712,6 +712,8 @@ main{flex:1;min-height:0}.tree-section{position:relative;height:100%;width:100%;
           ? 'ارتباط عائلي من جهة الأم، دون نسبة أبوية إلى أسرة الشيخ محمد.'
           : F.relation(p);
         tooltip.append(note);
+        if(p.adminBirth){const d=document.createElement('p');d.className='tip-note';d.textContent='الميلاد: '+p.adminBirth;tooltip.append(d)}
+        if(p.adminDeath){const d=document.createElement('p');d.className='tip-note';d.textContent='الوفاة: '+p.adminDeath;tooltip.append(d)}
         lastTooltipId = id;
       }
       tooltip.hidden = false;
