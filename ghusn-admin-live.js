@@ -253,7 +253,17 @@ function enable(){
  const frame=document.getElementById('ghusn-app');if(!frame)return;
  const apply=()=>{
    install(frame);
-   try{addCoreEdit(frame.contentDocument,frame.contentWindow)}catch(e){}
+   try{
+     const d=frame.contentDocument,w=frame.contentWindow;
+     if(!d||!w)return;
+     addCoreEdit(d,w);
+     if(!d.documentElement.hasAttribute('data-ghusn-core-admin-watcher')){
+       d.documentElement.setAttribute('data-ghusn-core-admin-watcher','1');
+       new w.MutationObserver(()=>{
+         if(w.GhusnApp&&!d.getElementById('ghusn-admin-edit-current'))addCoreEdit(d,w);
+       }).observe(d.body,{subtree:true,childList:true,attributes:true,attributeFilter:['hidden','class']});
+     }
+   }catch(e){}
  };
  frame.addEventListener('load',apply);
  if(frame.contentDocument?.readyState==='complete')apply();
