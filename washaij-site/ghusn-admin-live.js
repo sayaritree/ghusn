@@ -155,10 +155,10 @@ async function edit(card,d,w){
  overlay.setAttribute("role","dialog");overlay.setAttribute("aria-modal","true");
  overlay.setAttribute("aria-label","تحرير بيانات الشخص");
  function textInput(label,key,extra,placeholder){
-   return '<label class="gie-field '+(extra||'')+'"><span>'+label+'</span><input name="'+key+'" value="'+esc(data[key])+'" '+(key==='name'?'required ':'')+'placeholder="'+esc(placeholder||"")+'"></label>';
+   return '<label class="gie-field '+(extra||'')+'"><span>'+label+'</span><input name="'+key+'" value="'+esc(data[key])+'" '+(key==='name'?'required ':'')+(['father','mother'].includes(key)?'readonly title="هذا حقل نصي قديم، واختيار القرابة من القسم الموثق بالأسفل" ':'')+'placeholder="'+esc(placeholder||"")+'"></label>';
  }
  function area(label,key,rows,extra){
-   return '<label class="gie-field '+(extra||'')+'"><span>'+label+'</span><textarea name="'+key+'" rows="'+rows+'">'+esc(data[key])+'</textarea></label>';
+   return '<label class="gie-field '+(extra||'')+'"><span>'+label+'</span><textarea name="'+key+'" rows="'+rows+'" '+(['sons','daughters','brothers','sisters','partners'].includes(key)?'readonly title="هذه أسماء وصفية قديمة وليست مصدر ربط الأنساب"':'')+'>'+esc(data[key])+'</textarea></label>';
  }
  overlay.innerHTML='<div class="gie-panel">'+
  '<div class="gie-header"><div><h2>تحرير بيانات الشخص</h2><p class="gie-person-title">'+esc(person.name)+'</p></div>'+
@@ -189,7 +189,8 @@ async function edit(card,d,w){
  '<section id="gie-verified-links" class="gie-reviewed-links" aria-label="محرر روابط النسب">'+
  '<h3>روابط الأنساب الموثقة</h3><p class="gie-footnote">اختر الأشخاص من سجلات وشائج؛ الكتابة النصية بالأعلى لا تنشئ أو تحذف صلات نسب. لا تُعرض الأرقام الداخلية.</p>'+
  '<div class="gie-row gie-row-half"><label class="gie-field"><span>الأب المسجل</span><select id="gie-father-select"></select></label>'+
- '<label class="gie-field"><span>الأم المسجلة</span><select id="gie-mother-select"></select></label></div>'+
+ '<label class="gie-field"><span>الأم المسجلة</span><select id="gie-mother-select"></select></label></div>'+ 
+ '<div class="gie-footnote" id="gie-parent-family-preview" role="status"></div>'+
  '<div class="gie-row gie-row-half"><label class="gie-field"><span>نوع الصلة بالوالدين</span><select id="gie-lineage-type"></select></label>'+
  '<label class="gie-field"><span>إضافة ابن أو ابنة مسجلين</span><select id="gie-add-child"></select></label></div>'+
  '<div id="gie-verified-children" class="gie-verified-list"></div>'+
@@ -209,10 +210,17 @@ async function edit(card,d,w){
    var o=d.createElement('option');o.value=value;o.textContent=label;select.appendChild(o);
  }
  var named=[...roster.values()].filter(function(p){return ['ولد','بنت'].includes(p.gender)});
+ function nameForUnknown(id){
+   var old=allRows.find(function(p){return String(p.fatherId||'')===id||String(p.motherId||'')===id||String(p.spouseId||'')===id});
+   if(!old)return 'شخص مرتبط من البيانات الأصلية';
+   if(String(old.fatherId||'')===id)return old.fatherName||'أب مرتبط';
+   if(String(old.motherId||'')===id)return old.motherName||'أم مرتبطة';
+   return old.spouseName||'زوج مرتبط';
+ }
  var duplicateCounts={};
  named.forEach(function(p){duplicateCounts[p.name]=(duplicateCounts[p.name]||0)+1});
  function labelOf(id){
-   var p=roster.get(String(id));if(!p)return 'شخص غير مسجل';
+   var p=roster.get(String(id));if(!p)return nameForUnknown(String(id));
    return p.name+(duplicateCounts[p.name]>1?(p.fatherName?' — والده '+p.fatherName:(p.motherName?' — والدته '+p.motherName:'')):'');
  }
  var typeNames={marriage:'نسب من زواج',biological:'نسب بيولوجي دون استنتاج زواج',care:'تبنٍّ أو رعاية',unknown:'صلة خاصة غير محددة'};
@@ -227,8 +235,18 @@ async function edit(card,d,w){
  var fs=overlay.querySelector('#gie-father-select'),ms=overlay.querySelector('#gie-mother-select');
  fillSelect(fs,'ولد',linkChoice.fatherId,'غير محدد — اختر الأب');
  fillSelect(ms,'بنت',linkChoice.motherId,'غير محدد — اختر الأم');
- fs.onchange=function(){linkChoice.fatherId=fs.value};
- ms.onchange=function(){linkChoice.motherId=ms.value};
+ function showParentFamilies(){
+   var target=overlay.querySelector('#gie-parent-family-preview'),details=[];
+   for(const [role,id,field] of [['الأب',fs.value,'fatherId'],['الأم',ms.value,'motherId']]){
+     if(!id)continue;
+     var related=[...roster.values()].filter(function(p){return String(p[field]||'')===id&&String(p.id)!==personId});
+     details.push('أبناء '+role+' المسجلون: '+(related.length?related.map(function(p){return p.name}).join('، '):'لا يوجد غير المسجل حاليًا'));
+   }
+   target.textContent=details.join(' | ');
+ }
+ fs.onchange=function(){linkChoice.fatherId=fs.value;showParentFamilies()};
+ ms.onchange=function(){linkChoice.motherId=ms.value;showParentFamilies()};
+ showParentFamilies();
  var lineage=overlay.querySelector('#gie-lineage-type');
  Object.entries(typeNames).forEach(function(pair){textOption(lineage,pair[1],pair[0])});
  lineage.value=linkChoice.lineageType;
