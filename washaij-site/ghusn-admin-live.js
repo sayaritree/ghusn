@@ -221,6 +221,7 @@ async function edit(card,d,w){
    named.filter(function(p){return String(p.id)!==personId&&(!gender||p.gender===gender)}).sort(function(a,b){return labelOf(a.id).localeCompare(labelOf(b.id),'ar')}).forEach(function(p){
      textOption(select,labelOf(p.id),String(p.id));
    });
+   if(selected&&!select.querySelector('option[value="'+selected+'"]'))textOption(select,(select===fs?row.fatherName:row.motherName)||'شخص مرتبط خارج السجلات',selected);
    select.value=selected||'';
  }
  var fs=overlay.querySelector('#gie-father-select'),ms=overlay.querySelector('#gie-mother-select');
