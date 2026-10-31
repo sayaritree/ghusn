@@ -554,12 +554,12 @@ window.GHOSN_APPLY_APPROVED = function(items){
   for(const rec of items){
     const id=String(rec.personId||''),p=people.get(id),f=rec.fields||{};
     if(!p||p.external||!/^[0-9]{1,12}$/.test(id))continue;
-    if(typeof f.name==='string'&&f.name.trim())p.name=f.name.trim();
+    if(typeof f.name==='string'&&f.name.trim()){p.name=f.name.trim();p.given=p.name.split(/\s+/).filter(w=>w&&!['الشيخ','الشيخة','الحاج','الحاجة','الأستاذ','الدكتور','الدكتورة'].includes(w))[0]||p.given;}
     if(typeof f.birth==='string'){p.birthH=f.birth.trim();p.birthG='';}
     if(typeof f.death==='string'){p.deathH=f.death.trim();p.deathG='';}
     for(const row of RAW){
       if(String(row.id)!==id)continue;
-      if(typeof f.name==='string'&&f.name.trim())row.name=f.name.trim();
+      if(typeof f.name==='string'&&f.name.trim()){row.name=f.name.trim();row.given=p.given;}
       if(typeof f.birth==='string'){row.birthH=f.birth.trim();row.birthG='';}
       if(typeof f.death==='string'){row.deathH=f.death.trim();row.deathG='';}
     }
