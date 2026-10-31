@@ -12,14 +12,14 @@ async function request(action,body){
 let authenticated=false;
 const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const toolbar=document.createElement('button');
-toolbar.id='ghusn-admin-access';toolbar.type='button';toolbar.textContent='دخول الإدارة';
+toolbar.id='ghusn-admin-access';toolbar.type='button';toolbar.textContent='دخول إدارة وَشَائِج';
 toolbar.style.cssText='position:fixed;left:12px;top:72px;z-index:20000;background:#fffdf7;border:1px solid #b3d5bd;border-radius:10px;color:#1c6040;padding:7px 10px;font:700 11px Tahoma,Arial;cursor:pointer;box-shadow:0 3px 14px #142a1a19';
 function login(){
  document.querySelector('#ghusn-auth-dialog')?.remove();
  const overlay=document.createElement('div');overlay.id='ghusn-auth-dialog';
  overlay.style.cssText='position:fixed;inset:0;z-index:2147483600;display:flex;align-items:center;justify-content:center;background:#13291e80;padding:18px;direction:rtl;font-family:Tahoma,Arial';
  overlay.innerHTML='<form style="background:#fff;width:min(410px,100%);padding:22px;display:grid;gap:12px;border-radius:16px;box-shadow:0 15px 60px #1237">'+
- '<h3 style="margin:0;color:#216242;font-size:19px">دخول مدير الأنساب</h3>'+
+ '<h3 style="margin:0;color:#216242;font-size:19px">دخول مدير وَشَائِج</h3>'+
  '<p style="margin:0;font-size:12px;color:#576e5e">دخول المدير مستقل عن حساب المشاهدة العادي.</p>'+
  '<label style="font-size:12px">اسم المستخدم<input name="username" value="admin" readonly style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #c5dacb;border-radius:8px;margin-top:6px"></label>'+
  '<label style="font-size:12px">كلمة المرور<input name="password" autocomplete="current-password" type="password" required style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #c5dacb;border-radius:8px;margin-top:6px"></label>'+
@@ -49,13 +49,13 @@ function menu(){
  if(existing){existing.remove();return}
  const box=document.createElement('div');box.id='ghusn-admin-menu';
  box.style.cssText='position:fixed;left:12px;top:112px;z-index:20001;background:white;border:1px solid #b4cfbb;border-radius:12px;box-shadow:0 14px 35px #14281933;padding:12px;display:grid;gap:8px;direction:rtl;font:12px Tahoma,Arial';
- box.innerHTML='<strong>مدير غُصن</strong><button type="button" id="ga-download">تصدير مسودات الإدارة</button>'+
+ box.innerHTML='<strong>مدير وَشَائِج</strong><button type="button" id="ga-download">تصدير مسودات الإدارة</button>'+
  '<button type="button" id="ga-import">استيراد تعديلات التجربة</button>'+
  '<button type="button" id="ga-logout">تسجيل الخروج</button>'+
  '<input id="ga-input" type="file" accept=".json,application/json" hidden>';
  document.body.appendChild(box);
  box.querySelectorAll('button').forEach(b=>b.style.cssText='padding:9px;border:1px solid #c9dbcf;border-radius:7px;background:#f6faf7;cursor:pointer;text-align:right;font:12px Tahoma,Arial');
- box.querySelector('#ga-download').onclick=async()=>{try{download('غصن-النسخ-الاحتياطية.json',await request('export'))}catch(err){alert(err.message)}};
+ box.querySelector('#ga-download').onclick=async()=>{try{download('وشائج-النسخ-الاحتياطية.json',await request('export'))}catch(err){alert(err.message)}};
  box.querySelector('#ga-import').onclick=()=>box.querySelector('#ga-input').click();
  box.querySelector('#ga-input').onchange=async e=>{
    const file=e.target.files[0];if(!file)return;
@@ -69,7 +69,7 @@ function menu(){
           return {personId:String(x.personId),originalName:String(x.originalName||x.name||''),
             fields:Object.fromEntries(keys.filter(k=>typeof x[k]==='string').map(k=>[k,x[k]]))};
         }):null;
-     if(!Array.isArray(records))throw Error('هذا الملف ليس نسخة تصدير معتمدة من غُصن');
+     if(!Array.isArray(records))throw Error('هذا الملف ليس نسخة تصدير معتمدة من وَشَائِج');
      if(!confirm('استيراد '+records.length+' تعديلات كمسودات للمراجعة، دون نشرها للزوار؟'))return;
      const res=await request('import',{records});
      alert('تم استيراد '+res.imported+' مسودة. لا تظهر على الشجرة حتى اعتمادها.');
@@ -82,7 +82,7 @@ function menu(){
 }
 function unlock(){
  window.GhusnAdminAuthenticated=true;
- toolbar.textContent='إدارة غُصن';
+ toolbar.textContent='إدارة وَشَائِج';
  window.dispatchEvent(new Event('ghusn-admin-authenticated'));
 }
 function start(){
