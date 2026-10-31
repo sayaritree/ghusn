@@ -112,6 +112,16 @@ export default async function handler(req,context){
     });
   }
   if(action==='session'&&req.method==='GET')return respond({configured:true,authenticated:authenticated(req,s)});
+  if(action==='public'&&req.method==='GET'){
+    let store;try{store=storeFor(context)}catch(_){return respond({error:'تعذر قراءة البيانات المعتمدة'},503)}
+    const approved=await entryList(store,'approved/');
+    return respond({schema:'washaij-approved-public-v1',items:approved.map(item=>({
+      personId:item.personId,
+      fields:Object.fromEntries(PUBLIC.filter(k=>typeof item.fields?.[k]==='string').map(k=>[k,item.fields[k]])),
+      approvedAt:item.approvedAt
+    }))});
+  }
+
   if(!authenticated(req,s))return respond({error:'يجب دخول المدير أولًا'},401);
   if(action==='logout'&&req.method==='POST')return respond({authenticated:false},200,{'set-cookie':sessionCookie('',true)});
   let store;try{store=storeFor(context)}catch(e){return respond({error:'تعذّر الاتصال بالتخزين'},503)}
