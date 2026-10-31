@@ -13,6 +13,8 @@ function nameOf(el){
  return "";
 }
 function personCard(d,w){
+ var exact=d.querySelector('#ghosnDetailModal:not([hidden]) .ghosn-modal-dialog');
+ if(exact && showing(exact,w) && nameOf(exact)) return exact;
  var sel='dialog[open],[role="dialog"],.person-modal,.person-popup,.person-card,.profile-modal,.modal-content,.person-details,.person-info,.details-modal,.info-card,.node-info,.popup-content';
  var els=d.querySelectorAll(sel);
  for(var i=0;i<els.length;i++){var el=els[i],t=el.textContent||"";if(!el.closest("#ghusn-inline-editor")&&t.length>35&&t.length<5500&&/(الأب|الأم|الأبناء|البنات|الزوج|العلاقات الأسرية|الارتباطات)/.test(t)&&showing(el,w)&&nameOf(el))return el}
@@ -103,11 +105,19 @@ function install(frame){
  var pending=false;
  function inspect(){
    pending=false;
-   var card=personCard(d,w);if(!card||card.hasAttribute("data-ghusn-admin-card"))return;
+   var card=personCard(d,w);if(!card)return;
+   if(card.hasAttribute("data-ghusn-admin-card")){
+     var already=card.querySelector('.ghusn-edit-from-card');
+     if(already && !card.closest('#ghosnDetailModal[hidden]')){
+       var id=refOf(card).id, current=already.getAttribute('data-ghusn-owner-id');
+       if(id && current!==id){already.setAttribute('data-ghusn-owner-id',id);already.textContent='✎ تحرير بياناته';}
+     }
+     return;
+   }
    var item=refOf(card);if(!item.name)return;
    card.setAttribute("data-ghusn-admin-card","1");
    var b=d.createElement("button");b.type="button";b.className="ghusn-edit-from-card";
-   b.textContent="✎ تحرير بياناته";b.onclick=function(e){e.preventDefault();e.stopPropagation();edit(card,d,w)};
+   b.textContent="✎ تحرير بياناته";b.setAttribute('data-ghusn-owner-id',item.id||'');b.onclick=function(e){e.preventDefault();e.stopPropagation();edit(card,d,w)};
    var footer=card.querySelector(".ghosn-modal-footer"); if(footer)footer.insertBefore(b,footer.firstChild);else card.appendChild(b);
  }
  function schedule(){if(!pending){pending=true;w.requestAnimationFrame(inspect)}}
