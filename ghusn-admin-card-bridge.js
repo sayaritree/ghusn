@@ -165,16 +165,27 @@ function edit(card,d,w){
    reviewer.hidden=false;
    reviewer.textContent=changes.length?"التغييرات المطلوب مراجعتها:\n"+changes.join("\n"):"لا توجد تغييرات عن البيانات الأصلية.";
  };
- form.onsubmit=function(e){
+ form.onsubmit=async function(e){
    e.preventDefault();
    var v=values(),all=drafts(w);if(!String(v.name||"").trim())return;
    all[person.key]=Object.assign({},v,{originalName:person.name,personId:person.id||null,
       context:person.context,status:"draft",updatedAt:new Date().toISOString()});
-   try{w.localStorage.setItem(STORE,JSON.stringify(all))}
-   catch(err){w.alert("تعذّر حفظ المسودة في هذا المتصفح؛ لم تتغير بيانات الشجرة.");return}
+   var admin=w.top&&w.top.GHUSN_ADMIN;
+   var production=new URLSearchParams(w.top.location.search).get("ghusnAdmin")==="1";
+   if(production){
+     if(!admin||!admin.canEdit){w.alert("تسجيل الدخول كمدير مطلوب. لم يُحفظ أي تعديل.");return}
+     try{
+       var savedRevision=await admin.saveDraft(String(person.id||""),person.name,v);
+       w.alert("حُفظت المراجعة مركزيًا برقم "+savedRevision.key+". لم تُنشر التعديلات للزوار.");
+     }catch(err){w.alert("تعذّر الحفظ المركزي: "+err.message+". لم تُنشر التعديلات.");return}
+   }else{
+     try{w.localStorage.setItem(STORE,JSON.stringify(all))}
+     catch(err){w.alert("تعذّر حفظ المسودة في هذا المتصفح؛ لم تتغير بيانات الشجرة.");return}
+     w.alert("حُفظت المسودة المحلية فقط. لم تتغير بيانات الموقع المنشور.");
+   }
    var button=card.querySelector(".ghusn-edit-from-card");
    if(button)button.textContent="✎ تحرير بياناته — مسودة محفوظة";
-   close();w.alert("حُفظت المسودة المحلية فقط. لم تتغير بيانات الموقع المنشور.");
+   close();
  };
  var focus=overlay.querySelector('input[name="name"]');if(focus)focus.focus();
 }
@@ -237,7 +248,8 @@ function enableDraftExport(){
  document.body.appendChild(box);
 }
 function start(){
- if(new URLSearchParams(window.location.search).get("ghusnAdminPreview")!=="1")return;
+ var query=new URLSearchParams(window.location.search);
+ if(query.get("ghusnAdminPreview")!=="1" && !(query.get("ghusnAdmin")==="1"&&window.GHUSN_ADMIN?.canEdit))return;
  var backup=document.createElement('button');
  backup.type='button';backup.textContent='تصدير تعديلاتي التجريبية';
  backup.style.cssText='position:fixed;left:12px;top:120px;z-index:20000;background:#fffdf4;border:1px solid #8db99c;border-radius:10px;color:#215b40;padding:9px;font:700 12px Tahoma;cursor:pointer';
@@ -259,10 +271,11 @@ function start(){
   setTimeout(()=>URL.revokeObjectURL(url),1500);
  };
  document.body.appendChild(backup);
- enableDraftExport();
+ if(query.get("ghusnAdminPreview")==="1")enableDraftExport();
  var frame=document.getElementById("ghusn-app");if(!frame)return;
  frame.addEventListener("load",function(){install(frame)});
  if(frame.contentDocument&&frame.contentDocument.readyState==="complete")install(frame);
 }
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start,{once:true});else start();
+window.addEventListener("ghusn-admin-ready",start);
 })();
