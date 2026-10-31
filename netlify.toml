@@ -1,0 +1,10 @@
+# Deployment-only branch for the independent WASHAIJ site.
+# The published directory contains only Washaij and its admin assets.
+[build]
+  publish = "washaij-site"
+
+[functions]
+  directory = "netlify/washaij-functions"
+
+[build.environment]
+  NODE_VERSION = "22"
