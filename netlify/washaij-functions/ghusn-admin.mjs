@@ -317,7 +317,9 @@ export default async function handler(req,context){
     if(!publishedFields.name)return respond({error:'الاسم الكامل مطلوب قبل الاعتماد'},400);
     let changeResult=null,related=null;
     if(draft.links){
-      related=await readObject(store,'relations/current');
+      const relatedMeta=await store.getWithMetadata('relations/current',{type:'json',consistency:'strong'});
+      related=relatedMeta?.data||null;
+      var relatedEtag=relatedMeta?.etag||null;
       const version=related?.revision||'base';
       if(!body.reviewToken||!secureEqual(body.reviewToken,reviewSignature(s,id,draft,version)))
         return respond({error:'انتهت صلاحية مراجعة العلاقات؛ أعد معاينتها قبل الاعتماد'},409);
@@ -330,7 +332,9 @@ export default async function handler(req,context){
     if(changeResult&&changeResult.changes.length){
       const newRelations={revision:randomUUID(),overrides:changeResult.overrides,updatedAt:new Date().toISOString()};
       await audit(store,id,{before:related,after:newRelations,changes:changeResult.changes},'approve-relations');
-      await store.setJSON('relations/current',newRelations);
+      const written=await store.setJSON('relations/current',newRelations,
+        relatedEtag?{onlyIfMatch:relatedEtag}:{onlyIfNew:true});
+      if(written?.modified===false)return respond({error:'تغيّرت العلاقات أثناء المراجعة؛ أعد فحصها قبل النشر'},409);
     }
     await store.setJSON('approved/'+id,approved);
     return respond({approved:true,personId:id,fieldsPublished:PUBLIC,
