@@ -100,7 +100,7 @@ async function audit(store,id,record,action){
 }
 export default async function handler(req,context){
   const s=secret(),url=new URL(req.url),action=url.searchParams.get('action')||'session';
-  if(!s)return respond({configured:false,authenticated:false,error:'يلزم إعداد كلمة مرور الإدارة في إعدادات Netlify.'},503);
+  if(!s && !(action==='public' && req.method==='GET'))return respond({configured:false,authenticated:false,error:'يلزم إعداد كلمة مرور الإدارة في إعدادات Netlify.'},503);
   if(req.method!=='GET'&&req.method!=='POST')return respond({error:'طريقة الطلب غير مسموحة'},405);
   if(req.method==='POST'&&!originOK(req))return respond({error:'طلب غير مصرح به من مصدر خارجي'},403);
   if(action==='login'&&req.method==='POST'){
@@ -148,14 +148,14 @@ export default async function handler(req,context){
   }
   if(action==='import'){
     if(!Array.isArray(body.records)||body.records.length>500)return respond({error:'عدد السجلات غير صحيح'},400);
-    let count=0;
-    for(const item of body.records){
-      let rec;try{rec=sanitizeRecord(item)}catch(e){return respond({error:e.message},400)}
+    // Validate the entire batch before writing anything, preventing a partial import.
+    let records;
+    try{records=body.records.map(sanitizeRecord)}catch(e){return respond({error:e.message},400)}
+    for(const rec of records){
       await audit(store,rec.personId,rec,'import');
       await store.setJSON('draft/'+rec.personId,rec);
-      count++;
     }
-    return respond({imported:count,mode:'draft-only'});
+    return respond({imported:records.length,mode:'draft-only'});
   }
   if(action==='approve'){
     const id=idOf(body.personId);if(!id)return respond({error:'رقم الشخص غير صحيح'},400);
