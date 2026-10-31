@@ -100,6 +100,11 @@ async function audit(store,id,record,action){
 }
 export default async function handler(req,context){
   const s=secret(),url=new URL(req.url),action=url.searchParams.get('action')||'session';
+  // Public setup probe: returns only a category, never a credential or its length.
+  if(action==='setup-status' && req.method==='GET'){
+    const raw=String(globalThis.Netlify?.env?.get?.('GHUSN_ADMIN_SECRET')||process.env.GHUSN_ADMIN_SECRET||'');
+    return respond({service:'washaij-admin',configured:!!s,setupState:s?'ready':raw?'invalid_length':'not_available'});
+  }
   if(!s && !(action==='public' && req.method==='GET'))return respond({configured:false,authenticated:false,error:'يلزم إعداد كلمة مرور الإدارة في إعدادات Netlify.'},503);
   if(req.method!=='GET'&&req.method!=='POST')return respond({error:'طريقة الطلب غير مسموحة'},405);
   if(req.method==='POST'&&!originOK(req))return respond({error:'طلب غير مصرح به من مصدر خارجي'},403);
