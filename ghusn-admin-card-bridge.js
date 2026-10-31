@@ -219,6 +219,27 @@ function install(frame){
 }
 function start(){
  if(new URLSearchParams(window.location.search).get("ghusnAdminPreview")!=="1")return;
+ var backup=document.createElement('button');
+ backup.type='button';backup.textContent='تصدير تعديلاتي التجريبية';
+ backup.style.cssText='position:fixed;left:12px;top:120px;z-index:20000;background:#fffdf4;border:1px solid #8db99c;border-radius:10px;color:#215b40;padding:9px;font:700 12px Tahoma;cursor:pointer';
+ backup.onclick=function(){
+  let data={};try{data=JSON.parse(localStorage.getItem('ghusn_inline_admin_drafts_preview_v1')||'{}')}
+  catch(err){alert('تعذر قراءة تعديلات التجربة');return}
+  const allowed=['name','birth','death','father','mother','sons','daughters','brothers','sisters','partners','source','notes'];
+  const records=[];
+  Object.keys(data).forEach(function(k){
+    const value=data[k]||{},id=String(value.personId||'');
+    if(!/^\d{1,12}$/.test(id))return;
+    const fields={};for(const name of allowed)if(typeof value[name]==='string')fields[name]=value[name];
+    records.push({personId:id,originalName:String(value.originalName||''),fields:fields});
+  });
+  if(!records.length){alert('لم أجد مسودات ذات أرقام تعريفية قابلة للتصدير على هذا المتصفح.');return}
+  const payload={schema:'ghusn-preview-drafts-v1',exportedAt:new Date().toISOString(),records:records};
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json;charset=utf-8'});
+  const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='غصن-تعديلات-التجربة.json';link.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1500);
+ };
+ document.body.appendChild(backup);
  var frame=document.getElementById("ghusn-app");if(!frame)return;
  frame.addEventListener("load",function(){install(frame)});
  if(frame.contentDocument&&frame.contentDocument.readyState==="complete")install(frame);
