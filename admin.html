@@ -1,0 +1,26 @@
+<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>غُصن — دخول الإدارة</title><style>
+:root{font-family:Tahoma,Arial;background:#f4faf5;color:#254631}body{margin:0;padding:28px 12px}
+main{max-width:680px;margin:4vh auto;background:#fff;padding:28px;border:1px solid #d8e9dc;border-radius:19px;box-shadow:0 9px 36px #18492a16}
+h1{margin:0 0 8px;font-size:24px}p{line-height:1.85;color:#557263}form{display:grid;gap:12px;margin:18px 0}
+label{display:grid;gap:6px;font-weight:bold;font-size:13px}input{box-sizing:border-box;width:100%;padding:12px;border:1px solid #c8d9d0;border-radius:9px;font:15px Tahoma}
+button,.link{background:#17744a;color:#fff;border:0;border-radius:9px;padding:12px 15px;font:700 13px Tahoma;cursor:pointer;display:inline-block;text-decoration:none}
+.secondary{background:#eef5ee;color:#27563d}#ghusn-signed{border-top:1px solid #e5ece6;padding-top:16px}
+#ghusn-auth-state{font-weight:700}#auth-message{min-height:24px;color:#327054}#ghusn-import-section{border-top:1px solid #e7ece9;padding-top:20px;margin-top:23px}
+small{color:#718678;display:block;margin-top:20px;line-height:1.8}
+</style></head><body><main>
+<h1>غُصن — إدارة الأنساب</h1>
+<p>دخول المدير فقط. التغييرات تُحفظ كمراجعات داخلية، ولا تظهر للزوار إلا بعد اعتمادها وإعداد تحديث الموقع.</p>
+<div id="ghusn-auth-state">جارٍ فحص حالة الدخول…</div>
+<form id="ghusn-login-form" hidden><label>البريد الإلكتروني<input type="email" name="email" autocomplete="username" required></label>
+<label>كلمة المرور<input type="password" name="password" autocomplete="current-password" required></label>
+<button type="submit">تسجيل الدخول</button></form>
+<div id="ghusn-signed" hidden><p>الحساب: <strong id="ghusn-user-email"></strong></p>
+<a id="ghusn-enter-editor" class="link" href="/?ghusnAdmin=1" hidden>فتح الشجرة في وضع التحرير</a>
+<button type="button" id="ghusn-logout" class="secondary">تسجيل الخروج</button></div>
+<p id="auth-message" role="status"></p>
+<div id="ghusn-import-section" hidden><h2>استيراد تعديلات التجربة القديمة</h2>
+<p>صدّر الملف أولًا من رابط التجربة السابق باستخدام «تصدير تعديلات التجربة»، ثم ارفعه هنا لإضافته إلى قائمة المراجعة المركزية دون نشر.</p>
+<label>ملف المسودات بصيغة JSON<input id="ghusn-import-file" type="file" accept=".json,application/json"></label></div>
+<small>لا ترسل كلمة مرورك في المحادثة. إذا لم تُفعّل خدمة هوية Netlify بعد، فلن يعمل تسجيل الدخول. إنشاء الحساب وتعيين دور admin يتمان من إعدادات الموقع بواسطة مالكه فقط.</small>
+</main><script type="module" src="/admin-auth.bundle.js"></script></body></html>
