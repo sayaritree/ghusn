@@ -126,7 +126,7 @@ test('reject self-links, incompatible parent genders, missing IDs and obsolete r
   const cookie=auth.headers.get('set-cookie').split(';')[0];
   const root={fatherId:'79',motherId:'60',childrenIds:['82'],spouseIds:['81'],lineageType:'marriage',childTypes:{}};
   const save=async links=>call('save','POST',{personId:'80',fields:{name:'هيا الزاحم'},links},cookie);
-  for(const bad of [{...root,motherId:'80'},{...root,motherId:'81'},{...root,motherId:'999999999997'},{...root,childrenIds:['81']}]){
+  for(const bad of [{...root,motherId:'80'},{...root,motherId:'81'},{...root,fatherId:'82'},{...root,motherId:'999999999997'},{...root,childrenIds:['81']}]){
     assert.equal((await save(bad)).status,200);
     const invalid=await call('review','POST',{personId:'80'},cookie);
     assert.equal(invalid.status,409);
