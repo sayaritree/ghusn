@@ -5,9 +5,14 @@
   "type": "module",
   "description": "Privacy-limited, free-tier-friendly Telegram visitor summaries",
   "dependencies": {
-    "@netlify/blobs": "11.1.7"
+    "@netlify/blobs": "11.1.7",
+    "@netlify/identity": "2.0.0"
   },
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "build": "esbuild admin-auth.mjs --bundle --format=esm --platform=browser --target=es2022 --outfile=admin-auth.bundle.js"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.12"
   }
 }
