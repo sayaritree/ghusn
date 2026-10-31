@@ -144,7 +144,7 @@ function reviewRelations(personId,links,doc){
  return {changes,overrides};
 }
 function reviewSignature(s,id,draft,version){
- return createHmac('sha256',s).update('washaij-links-v1|'+id+'|'+draft.updatedAt+'|'+version+'|'+JSON.stringify(draft.links)).digest('hex');
+ return createHmac('sha256',s).update('washaij-links-v1|'+id+'|'+draft.updatedAt+'|'+version+'|'+JSON.stringify(draft.fields)+'|'+JSON.stringify(draft.links)).digest('hex');
 }
 
 
