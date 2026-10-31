@@ -249,7 +249,8 @@ function enableDraftExport(){
 }
 function start(){
  var query=new URLSearchParams(window.location.search);
- if(query.get("ghusnAdminPreview")!=="1" && !(query.get("ghusnAdmin")==="1"&&window.GHUSN_ADMIN?.canEdit))return;
+ var previewIsSafe=(location.hostname.startsWith("deploy-preview-")||location.hostname.includes("localhost"))&&query.get("ghusnAdminPreview")==="1";
+ if(!previewIsSafe && !(query.get("ghusnAdmin")==="1"&&window.GHUSN_ADMIN?.canEdit))return;
  var backup=document.createElement('button');
  backup.type='button';backup.textContent='تصدير تعديلاتي التجريبية';
  backup.style.cssText='position:fixed;left:12px;top:120px;z-index:20000;background:#fffdf4;border:1px solid #8db99c;border-radius:10px;color:#215b40;padding:9px;font:700 12px Tahoma;cursor:pointer';
@@ -271,7 +272,7 @@ function start(){
   setTimeout(()=>URL.revokeObjectURL(url),1500);
  };
  document.body.appendChild(backup);
- if(query.get("ghusnAdminPreview")==="1")enableDraftExport();
+ if(previewIsSafe)enableDraftExport();
  var frame=document.getElementById("ghusn-app");if(!frame)return;
  frame.addEventListener("load",function(){install(frame)});
  if(frame.contentDocument&&frame.contentDocument.readyState==="complete")install(frame);
