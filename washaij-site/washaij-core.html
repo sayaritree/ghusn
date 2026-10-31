@@ -356,10 +356,15 @@ for(const p of people.values())if(p.fatherId||p.motherId){const key=p.fatherId+'
 const person=pid=>{ const id=norm(pid); if(people.has(id))return people.get(id); const info=linkedNames.get(id)||{}; return {id:id,name:info.name||'الاسم غير موثق في الصفوف المحددة',given:'',gender:info.gender||'',row:null,rows:[],fatherId:'',motherId:'',spouseIds:[],external:true,birthH:'',birthG:'',deathH:'',deathG:''}; };
 const kidsOfPair=(father,mother)=>(pairs.get(norm(father)+'|'+norm(mother))||[]).slice().sort((a,b)=>srcOrder(person(a))-srcOrder(person(b)));
 const childrenOf=pid=>[...people.values()].filter(p=>p.fatherId===pid||p.motherId===pid).sort((a,b)=>srcOrder(a)-srcOrder(b));
+/* Keep an immutable relation baseline so repeated approvals cannot leave stale links. */
+const kinshipBaseline=new Map([...people].map(([id,p])=>[id,{
+ fatherId:p.fatherId,motherId:p.motherId,fatherName:p.fatherName,motherName:p.motherName,spouseIds:[...p.spouseIds]
+}]));
+const kinshipBaseRows=RAW.map(r=>({row:r,fatherId:r.fatherId,motherId:r.motherId,fatherName:r.fatherName,motherName:r.motherName,spouseId:r.spouseId,spouseName:r.spouseName}));
 function spousesOf(pid,gender){
  const found=new Set(person(pid).spouseIds||[]);
  for(const p of people.values())if((p.spouseIds||[]).includes(pid))found.add(p.id);
- for(const c of people.values()){ if(gender==='female'&&c.motherId===pid&&c.fatherId)found.add(c.fatherId); if(gender==='male'&&c.fatherId===pid&&c.motherId)found.add(c.motherId); }
+ for(const c of people.values()){ if((!c.lineageType||c.lineageType==='marriage')&&gender==='female'&&c.motherId===pid&&c.fatherId)found.add(c.fatherId); if((!c.lineageType||c.lineageType==='marriage')&&gender==='male'&&c.fatherId===pid&&c.motherId)found.add(c.motherId); }
  found.delete('');found.delete(pid); return [...found].sort((a,b)=>srcOrder(people.get(a))-srcOrder(people.get(b)));
 }
 function principalHusband(wid,candidates){ const direct=(person(wid).spouseIds||[]).find(x=>candidates.includes(x));if(direct)return direct; const reciprocal=candidates.find(x=>(person(x).spouseIds||[]).includes(wid));return reciprocal||candidates[0]||''; }
@@ -548,6 +553,49 @@ const search=$('#search'), suggestions=$('#suggestions'); let found=[]; function
 search.addEventListener('input',updateSearch); search.addEventListener('keydown',evt=>{if(evt.key==='Enter'&&found.length){evt.preventDefault();navigate(found[0].id);}if(evt.key==='Escape')suggestions.classList.remove('active');}); document.addEventListener('click',evt=>{if(!evt.target.closest('.search-wrap'))suggestions.classList.remove('active');});
 const initial=decodeURIComponent((location.hash.match(/person=([^&]+)/)||[])[1]||'38'); if(people.has(initial))focusId=initial; selectedId=focusId; render(); $('#back').disabled=true;
 window.GHOSN_BRIDGE = Object.freeze({ navigate, person, getFocusId:()=>focusId, getView:()=>({...view}), setView:(next)=>{view={...view,...next};syncView();}, getLayout:()=>window.__GHOSN_DEBUG__?.layout });
+window.GHOSN_APPLY_RELATIONS=function(data){
+ if(!data||typeof data!=='object'||!data.overrides||typeof data.overrides!=='object')return 0;
+ for(const [id,p] of people){
+   const base=kinshipBaseline.get(id),ov=data.overrides[id]||{};
+   p.fatherId=Object.prototype.hasOwnProperty.call(ov,'fatherId')?String(ov.fatherId||''):base.fatherId;
+   p.motherId=Object.prototype.hasOwnProperty.call(ov,'motherId')?String(ov.motherId||''):base.motherId;
+   p.spouseIds=Array.isArray(ov.spouseIds)?ov.spouseIds.filter(x=>people.has(String(x))).map(String):[...base.spouseIds];
+   p.lineageType=['marriage','biological','care','unknown'].includes(ov.lineageType)?ov.lineageType:'marriage';
+ }
+ for(const [id,p] of people){
+   p.fatherName=p.fatherId?person(p.fatherId).name:'';
+   p.motherName=p.motherId?person(p.motherId).name:'';
+ }
+ // Update the shared source array used by the details panel and the admin editor.
+ for(const original of kinshipBaseRows){
+   const r=original.row,p=people.get(String(r.id));
+   if(!p)continue;
+   r.fatherId=p.fatherId;r.motherId=p.motherId;
+   r.fatherName=p.fatherName;r.motherName=p.motherName;
+   r.spouseId='';r.spouseName='';
+ }
+ for(let i=RAW.length-1;i>=0;i--)if(RAW[i].__kinshipDynamic)RAW.splice(i,1);
+ for(const [id,p] of people){
+   const rows=kinshipBaseRows.filter(x=>String(x.row.id)===id).map(x=>x.row);
+   p.spouseIds.forEach((sp,i)=>{
+     if(!rows.length)return;
+     const r=i<rows.length?rows[i]:Object.assign({},rows[0],{__kinshipDynamic:true});
+     if(i>=rows.length)RAW.push(r);
+     r.spouseId=String(sp);r.spouseName=person(String(sp)).name;
+   });
+ }
+ pairs.clear();
+ for(const p of people.values())if(p.fatherId||p.motherId){
+   const key=p.fatherId+'|'+p.motherId;
+   if(!pairs.has(key))pairs.set(key,[]);
+   uniquePush(pairs.get(key),p.id);
+ }
+ if(document.getElementById('ghosnDetailModal')&&!document.getElementById('ghosnDetailModal').hidden){
+   document.getElementById('ghosnDetailModal').hidden=true;
+ }
+ render();
+ return Object.keys(data.overrides).length;
+};
 window.GHOSN_APPLY_APPROVED = function(items){
   if(!Array.isArray(items))return 0;
   const known=new Map();
@@ -884,6 +932,7 @@ if(document.body.classList.contains('ghosn-enhanced'))sync();
     const data=await resp.json();
     if(data.schema==='washaij-approved-public-v1' && Array.isArray(data.items)){
       window.GHOSN_APPLY_APPROVED?.(data.items);
+      window.GHOSN_APPLY_RELATIONS?.(data.relations);
     }
   }catch(_err){
     // The original approved family tree remains visible if this optional API is unavailable.
