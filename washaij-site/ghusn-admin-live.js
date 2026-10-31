@@ -152,7 +152,7 @@ async function edit(card,d,w){
  textInput("المصدر","source","","مرجع المعلومة")+
  '</div>'+
  '<div class="gie-row gie-row-notes">'+area("ملاحظة","notes",3,"")+'</div>'+
- '<p class="gie-footnote">تعديل أسماء الأقارب يُحفظ كطلب مراجعة، ولا يغيّر روابط النسب تلقائيًا. جميع التعديلات مسودات تجريبية غير منشورة.</p>'+
+ '<p class="gie-footnote">«حفظ المسودة» يحفظ البيانات للمراجعة فقط. «اعتماد ونشر» يُظهر الاسم والتواريخ والملاحظات المعتمدة للزوار؛ وتبقى تعديلات صلات القرابة معلّقة للتحقق من الروابط.</p>'+
  '<div id="gie-review" class="gie-review" hidden></div>'+
  '<div class="gie-actions"><button type="button" id="gie-review-button" class="gie-light">ماذا عدّلت؟</button>'+
  '<div class="gie-actions-end"><button type="button" id="gie-close" class="gie-light">إغلاق</button>'+
@@ -191,7 +191,14 @@ async function edit(card,d,w){
    try{
      await save();
      const result=await api('approve',{personId:person.id});
-     reviewer.hidden=false;reviewer.textContent='تم اعتماد البيانات الشخصية ونشرها. يُبقي النظام أي تعديلات في روابط الأقارب معلقة للمراجعة حتى يُحدد الأشخاص بمعرّفاتهم. حدّث الموقع لرؤية النتيجة.';
+     // Refresh the displayed tree as soon as Netlify confirms approval.
+     // Never apply relationship fields; only the public fields supported by the API.
+     const publicKeys=['name','birth','death','source','notes'],formFields=values();
+     const publicFields=Object.fromEntries(publicKeys.filter(k=>typeof formFields[k]==='string').map(k=>[k,formFields[k]]));
+     let applied=0;
+     try{applied=w.GHOSN_APPLY_APPROVED?.([{personId:person.id,fields:publicFields}])||0}catch(_e){}
+     reviewer.hidden=false;
+     reviewer.textContent=applied?'تم اعتماد البيانات ونشرها وتحديث الاسم في الشجرة فورًا. تبقى صلات القرابة المعدلة معلّقة حتى التحقق من هوية الأشخاص.':'تم اعتماد البيانات ونشرها. حدّث الصفحة (Ctrl+F5) لرؤية الاسم المعتمد؛ صلات القرابة المعدلة معلّقة للتحقق.';
    }catch(err){w.alert('تعذّر الاعتماد: '+err.message)}
    finally{this.disabled=false}
  };
