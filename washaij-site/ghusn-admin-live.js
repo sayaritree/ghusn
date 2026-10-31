@@ -43,6 +43,13 @@ function addCss(d){
  var s=d.createElement("style");s.id=STYLE_ID;
  s.textContent=[
  ".ghusn-edit-from-card{display:inline-flex!important;align-items:center;justify-content:center;font:700 13px Tahoma,Arial!important;direction:rtl!important;background:#ecfff4!important;color:#125c3e!important;border:1px solid #86bd9b!important;border-radius:9px!important;padding:9px 12px!important;cursor:pointer!important;margin:8px 4px!important}",
+ "#gie-verified-links{margin:13px 0;padding:15px;border:1px solid #c9dcd0;border-radius:12px;background:#f7fbf8}",
+ "#gie-verified-links h3{font-size:15px;margin:0 0 9px}",
+ "#gie-verified-links select{width:100%;max-width:100%;padding:10px;border-radius:8px;border:1px solid #cbdacd;background:#fff;color:#254735;font:12px Tahoma}",
+ ".gie-verified-list{min-height:35px;padding:8px;border:1px dashed #bcd4c6;border-radius:8px;background:#fff;display:flex;flex-wrap:wrap;gap:7px;align-content:flex-start}",
+ ".gie-link-pill{display:flex;align-items:center;gap:6px;padding:6px;border-radius:7px;background:#edf5ef;font-size:12px;max-width:100%}",
+ "#gie-verified-links .gie-link-pill select{width:auto;max-width:160px;padding:5px}",
+ "#gie-verified-links button.gie-remove-link{padding:4px 7px;background:#e5eeeb;color:#375c49}",
  ".ghusn-edit-from-card:focus-visible{outline:3px solid #1ca26f!important}",
  "#ghusn-inline-editor{position:fixed!important;inset:0!important;z-index:2147483600!important;display:flex!important;align-items:center;justify-content:center;padding:14px;box-sizing:border-box;background:rgba(9,40,28,.42);direction:rtl;font-family:Tahoma,Arial,sans-serif}",
  "#ghusn-inline-editor[hidden]{display:none!important}",
@@ -75,9 +82,11 @@ function addCss(d){
 async function edit(card,d,w){
  var person=refOf(card),saved={};
  if(!person.id){w.alert('هذا الشخص لا يحمل معرّفًا مؤكدًا، ولا يمكن تعديل أنسابه.');return}
- try{let current=await api('person',null,person.id);saved=current.draft?.fields||current.approved?.fields||{}}
+ try{let current=await api('person',null,person.id);saved=current.draft?.fields||current.approved?.fields||{};saved.__links=current.draft?.links||null}
  catch(err){w.alert('تعذّر جلب المسودة: '+err.message);return}
  var allRows=w.GHOSN_ROWS||[], personId=String(person.id||"");
+ var currentLinks=saved.__links||null;
+
  var row=allRows.find(function(p){return String(p.id)===personId})||(w.GhusnApp?.family?.person(personId)||{});
  var individuals=new Map();
  allRows.forEach(function(p){if(p.id!=null&&!individuals.has(String(p.id)))individuals.set(String(p.id),p)});
@@ -104,6 +113,31 @@ async function edit(card,d,w){
    });
  }
  function unique(arr){return [...new Set(arr.map(String).map(function(s){return s.trim()}).filter(Boolean))].join("، ")}
+ // These are descriptive legacy text fields. Actual genealogy links are edited by ID below.
+ var currentRecord=allRows.find(function(p){return String(p.id)===personId})||row;
+ var roster=new Map();
+ allRows.forEach(function(p){if(p.id!=null&&!roster.has(String(p.id)))roster.set(String(p.id),p)});
+ var parentField=row.gender==='ولد'?'fatherId':'motherId';
+ var currentChildren=[...roster.values()].filter(function(p){return String(p[parentField]||'')===personId}).map(function(p){return String(p.id)});
+ var currentPartners=new Set();
+ allRows.forEach(function(p){
+   if(String(p.id)===personId&&p.spouseId)currentPartners.add(String(p.spouseId));
+   if(String(p.spouseId||'')===personId)currentPartners.add(String(p.id));
+ });
+ var baselineLinks={
+   fatherId:String(row.fatherId||''),motherId:String(row.motherId||''),
+   childrenIds:currentChildren,spouseIds:[...currentPartners],
+   lineageType:row.lineageType||'marriage',childTypes:{}
+ };
+ var startingLinks=saved.__links||baselineLinks;
+ var linkChoice={
+   fatherId:String(startingLinks.fatherId||''),
+   motherId:String(startingLinks.motherId||''),
+   childrenIds:new Set((startingLinks.childrenIds||[]).map(String)),
+   spouseIds:new Set((startingLinks.spouseIds||[]).map(String)),
+   lineageType:startingLinks.lineageType||'marriage',
+   childTypes:{...(startingLinks.childTypes||{})}
+ };
  var initial={
     name:String(row.name||person.name),
     birth:String(row.birthH||row.birthG||""),
@@ -121,10 +155,10 @@ async function edit(card,d,w){
  overlay.setAttribute("role","dialog");overlay.setAttribute("aria-modal","true");
  overlay.setAttribute("aria-label","تحرير بيانات الشخص");
  function textInput(label,key,extra,placeholder){
-   return '<label class="gie-field '+(extra||'')+'"><span>'+label+'</span><input name="'+key+'" value="'+esc(data[key])+'" '+(key==='name'?'required ':'')+'placeholder="'+esc(placeholder||"")+'"></label>';
+   return '<label class="gie-field '+(extra||'')+'"><span>'+label+'</span><input name="'+key+'" value="'+esc(data[key])+'" '+(key==='name'?'required ':'')+(['father','mother'].includes(key)?'readonly title="هذا حقل نصي قديم، واختيار القرابة من القسم الموثق بالأسفل" ':'')+'placeholder="'+esc(placeholder||"")+'"></label>';
  }
  function area(label,key,rows,extra){
-   return '<label class="gie-field '+(extra||'')+'"><span>'+label+'</span><textarea name="'+key+'" rows="'+rows+'">'+esc(data[key])+'</textarea></label>';
+   return '<label class="gie-field '+(extra||'')+'"><span>'+label+'</span><textarea name="'+key+'" rows="'+rows+'" '+(['sons','daughters','brothers','sisters','partners'].includes(key)?'readonly title="هذه أسماء وصفية قديمة وليست مصدر ربط الأنساب"':'')+'>'+esc(data[key])+'</textarea></label>';
  }
  overlay.innerHTML='<div class="gie-panel">'+
  '<div class="gie-header"><div><h2>تحرير بيانات الشخص</h2><p class="gie-person-title">'+esc(person.name)+'</p></div>'+
@@ -152,7 +186,19 @@ async function edit(card,d,w){
  textInput("المصدر","source","","مرجع المعلومة")+
  '</div>'+
  '<div class="gie-row gie-row-notes">'+area("ملاحظة","notes",3,"")+'</div>'+
- '<p class="gie-footnote">«حفظ المسودة» يحفظ البيانات للمراجعة فقط. «اعتماد ونشر» يُظهر الاسم والتواريخ والملاحظات المعتمدة للزوار؛ وتبقى تعديلات صلات القرابة معلّقة للتحقق من الروابط.</p>'+
+ '<section id="gie-verified-links" class="gie-reviewed-links" aria-label="محرر روابط النسب">'+
+ '<h3>روابط الأنساب الموثقة</h3><p class="gie-footnote">اختر الأشخاص من سجلات وشائج؛ الكتابة النصية بالأعلى لا تنشئ أو تحذف صلات نسب. لا تُعرض الأرقام الداخلية.</p>'+
+ '<div class="gie-row gie-row-half"><label class="gie-field"><span>الأب المسجل</span><select id="gie-father-select"></select></label>'+
+ '<label class="gie-field"><span>الأم المسجلة</span><select id="gie-mother-select"></select></label></div>'+ 
+ '<div class="gie-footnote" id="gie-parent-family-preview" role="status"></div>'+
+ '<div class="gie-row gie-row-half"><label class="gie-field"><span>نوع الصلة بالوالدين</span><select id="gie-lineage-type"></select></label>'+
+ '<label class="gie-field"><span>إضافة ابن أو ابنة مسجلين</span><select id="gie-add-child"></select></label></div>'+
+ '<div id="gie-verified-children" class="gie-verified-list"></div>'+
+ '<div class="gie-row gie-row-half"><label class="gie-field"><span>إضافة زوج أو زوجة مسجلين</span><select id="gie-add-partner"></select></label>'+
+ '<div id="gie-verified-partners" class="gie-verified-list"></div></div>'+
+ '<p class="gie-footnote">لا تُستبدل هوية شخص بمجرد تغيير اسمه. لإنشاء شخص جديد غير موجود في القاعدة، يُضاف أولًا بسجل مستقل ثم يُختار للربط.</p>'+
+ '</section>'+
+ '<p class="gie-footnote">«حفظ المسودة» للمراجعة فقط. «اعتماد ونشر» يقدّم مقارنة علاقات قبل التأكيد النهائي، ويرفض التضارب والدورات في النسب.</p>'+
  '<div id="gie-review" class="gie-review" hidden></div>'+
  '<div class="gie-actions"><button type="button" id="gie-review-button" class="gie-light">ماذا عدّلت؟</button>'+
  '<div class="gie-actions-end"><button type="button" id="gie-close" class="gie-light">إغلاق</button>'+
@@ -160,6 +206,95 @@ async function edit(card,d,w){
  '</form></div>';
  d.body.appendChild(overlay);
  var form=overlay.querySelector("#gie-form");
+ function textOption(select,label,value){
+   var o=d.createElement('option');o.value=value;o.textContent=label;select.appendChild(o);
+ }
+ var named=[...roster.values()].filter(function(p){return ['ولد','بنت'].includes(p.gender)});
+ function nameForUnknown(id){
+   var old=allRows.find(function(p){return String(p.fatherId||'')===id||String(p.motherId||'')===id||String(p.spouseId||'')===id});
+   if(!old)return 'شخص مرتبط من البيانات الأصلية';
+   if(String(old.fatherId||'')===id)return old.fatherName||'أب مرتبط';
+   if(String(old.motherId||'')===id)return old.motherName||'أم مرتبطة';
+   return old.spouseName||'زوج مرتبط';
+ }
+ var duplicateCounts={};
+ named.forEach(function(p){duplicateCounts[p.name]=(duplicateCounts[p.name]||0)+1});
+ function labelOf(id){
+   var p=roster.get(String(id));if(!p)return nameForUnknown(String(id));
+   return p.name+(duplicateCounts[p.name]>1?(p.fatherName?' — والده '+p.fatherName:(p.motherName?' — والدته '+p.motherName:'')):'');
+ }
+ var typeNames={marriage:'نسب من زواج',biological:'نسب بيولوجي دون استنتاج زواج',care:'تبنٍّ أو رعاية',unknown:'صلة خاصة غير محددة'};
+ function fillSelect(select,gender,selected,placeholder){
+   textOption(select,placeholder,'');
+   named.filter(function(p){return String(p.id)!==personId&&(!gender||p.gender===gender)}).sort(function(a,b){return labelOf(a.id).localeCompare(labelOf(b.id),'ar')}).forEach(function(p){
+     textOption(select,labelOf(p.id),String(p.id));
+   });
+   if(selected&&!select.querySelector('option[value="'+selected+'"]'))textOption(select,(select===fs?row.fatherName:row.motherName)||'شخص مرتبط خارج السجلات',selected);
+   select.value=selected||'';
+ }
+ var fs=overlay.querySelector('#gie-father-select'),ms=overlay.querySelector('#gie-mother-select');
+ fillSelect(fs,'ولد',linkChoice.fatherId,'غير محدد — اختر الأب');
+ fillSelect(ms,'بنت',linkChoice.motherId,'غير محدد — اختر الأم');
+ function showParentFamilies(){
+   var target=overlay.querySelector('#gie-parent-family-preview'),details=[];
+   for(const [role,id,field] of [['الأب',fs.value,'fatherId'],['الأم',ms.value,'motherId']]){
+     if(!id)continue;
+     var related=[...roster.values()].filter(function(p){return String(p[field]||'')===id&&String(p.id)!==personId});
+     details.push('أبناء '+role+' المسجلون: '+(related.length?related.map(function(p){return p.name}).join('، '):'لا يوجد غير المسجل حاليًا'));
+   }
+   target.textContent=details.join(' | ');
+ }
+ fs.onchange=function(){linkChoice.fatherId=fs.value;showParentFamilies()};
+ ms.onchange=function(){linkChoice.motherId=ms.value;showParentFamilies()};
+ showParentFamilies();
+ var lineage=overlay.querySelector('#gie-lineage-type');
+ Object.entries(typeNames).forEach(function(pair){textOption(lineage,pair[1],pair[0])});
+ lineage.value=linkChoice.lineageType;
+ lineage.onchange=function(){linkChoice.lineageType=lineage.value};
+ var addChild=overlay.querySelector('#gie-add-child'),addPartner=overlay.querySelector('#gie-add-partner');
+ function redrawLinks(){
+   var kids=overlay.querySelector('#gie-verified-children'),partners=overlay.querySelector('#gie-verified-partners');
+   kids.replaceChildren();partners.replaceChildren();addChild.replaceChildren();addPartner.replaceChildren();
+   textOption(addChild,'اختر شخصًا لإضافته إلى الأبناء','');
+   textOption(addPartner,'اختر شخصًا لإضافته إلى الأزواج','');
+   named.filter(function(p){return String(p.id)!==personId&&!linkChoice.childrenIds.has(String(p.id))}).forEach(function(p){textOption(addChild,labelOf(p.id),String(p.id))});
+   named.filter(function(p){return String(p.id)!==personId&&!linkChoice.spouseIds.has(String(p.id))&&p.gender!==row.gender}).forEach(function(p){textOption(addPartner,labelOf(p.id),String(p.id))});
+   function pill(box,id,set,isChild){
+      var wrapper=d.createElement('div');wrapper.className='gie-link-pill';
+      var name=d.createElement('span');name.textContent=labelOf(id);wrapper.appendChild(name);
+      if(isChild){
+        var pick=d.createElement('select');
+        Object.entries(typeNames).forEach(function(pair){textOption(pick,pair[1],pair[0])});
+        pick.value=linkChoice.childTypes[id]||roster.get(id)?.lineageType||'marriage';
+        pick.onchange=function(){linkChoice.childTypes[id]=pick.value};
+        wrapper.appendChild(pick);
+      }
+      var remove=d.createElement('button');remove.type='button';remove.className='gie-remove-link';remove.textContent='إزالة الصلة';
+      remove.onclick=function(){set.delete(id);delete linkChoice.childTypes[id];redrawLinks()};
+      wrapper.appendChild(remove);box.appendChild(wrapper);
+   }
+   linkChoice.childrenIds.forEach(function(id){pill(kids,id,linkChoice.childrenIds,true)});
+   linkChoice.spouseIds.forEach(function(id){pill(partners,id,linkChoice.spouseIds,false)});
+   if(!linkChoice.childrenIds.size)kids.textContent='لم تُحدَّد أبناء أو بنات';
+   if(!linkChoice.spouseIds.size)partners.textContent='لم تُحدَّد علاقات زوجية';
+ }
+ addChild.onchange=function(){if(addChild.value){linkChoice.childrenIds.add(addChild.value);redrawLinks()}};
+ addPartner.onchange=function(){if(addPartner.value){linkChoice.spouseIds.add(addPartner.value);redrawLinks()}};
+ redrawLinks();
+ function relationValues(){
+   return {fatherId:linkChoice.fatherId,motherId:linkChoice.motherId,
+     childrenIds:[...linkChoice.childrenIds].sort(),spouseIds:[...linkChoice.spouseIds].sort(),
+     lineageType:linkChoice.lineageType,
+     childTypes:Object.fromEntries([...linkChoice.childrenIds].filter(function(id){return (linkChoice.childTypes[id]||'marriage')!=='marriage'}).map(function(id){return [id,linkChoice.childTypes[id]]}))};
+ }
+ function sameRelations(a,b){
+   return a.fatherId===b.fatherId&&a.motherId===b.motherId&&a.lineageType===b.lineageType&&
+     JSON.stringify([...a.childrenIds].sort())===JSON.stringify([...b.childrenIds].sort())&&
+     JSON.stringify([...a.spouseIds].sort())===JSON.stringify([...b.spouseIds].sort())&&
+     JSON.stringify(a.childTypes||{})===JSON.stringify(b.childTypes||{});
+ }
+ var reviewSnapshot=null,reviewToken=null;
+
  function values(){return Object.fromEntries(new w.FormData(form).entries())}
  function close(){overlay.remove()}
  overlay.querySelector("#gie-close").onclick=close;
@@ -176,30 +311,47 @@ async function edit(card,d,w){
  };
  async function save(){
   var v=values();if(!v.name.trim())throw Error('الاسم الكامل مطلوب');
-  await api('save',{personId:person.id,originalName:person.name,fields:v});
+  var links=relationValues();
+  // A plain text edit must not implicitly rewrite existing kinship links.
+  var includeLinks=!sameRelations(links,{...baselineLinks,
+    childrenIds:[...baselineLinks.childrenIds].sort(),spouseIds:[...baselineLinks.spouseIds].sort()});
+  await api('save',{personId:person.id,originalName:person.name,fields:v,links:includeLinks?links:null});
   saved=v;reviewer.hidden=false;reviewer.textContent='حُفظت المسودة مركزيًا. لم تُنشر للزوار.';
   var button=card.querySelector('.ghusn-edit-from-card');
   if(button)button.textContent='✎ تحرير بياناته — مسودة محفوظة';
  }
  form.onsubmit=async function(e){
    e.preventDefault();var button=overlay.querySelector('#gie-save');button.disabled=true;
-   try{await save()}catch(err){w.alert('تعذّر الحفظ: '+err.message)}
+   try{await save();reviewSnapshot=null;reviewToken=null;overlay.querySelector('#gie-publish').textContent='اعتماد ونشر'}
+   catch(err){w.alert('تعذّر الحفظ: '+err.message)}
    finally{button.disabled=false}
  };
  overlay.querySelector('#gie-publish').onclick=async function(){
    this.disabled=true;
    try{
+     const snapshot=JSON.stringify({fields:values(),links:relationValues()});
+     if(reviewSnapshot && reviewToken && snapshot===reviewSnapshot){
+       const result=await api('approve',{personId:person.id,reviewToken:reviewToken});
+       const publicData=await api('public');
+       w.GHOSN_APPLY_APPROVED?.(publicData.items||[]);
+       w.GHOSN_APPLY_RELATIONS?.(publicData.relations);
+       reviewer.hidden=false;
+       reviewer.textContent=result.relationsApplied?'تم اعتماد العلاقات بعد مراجعة المعرّفات، وأُعيد بناء المشجر.':'نُشرت البيانات المعتمدة في المشجر.';
+       reviewSnapshot=null;reviewToken=null;this.textContent='اعتماد ونشر';
+       return;
+     }
      await save();
-     const result=await api('approve',{personId:person.id});
-     // Refresh the displayed tree as soon as Netlify confirms approval.
-     // Never apply relationship fields; only the public fields supported by the API.
-     const publicKeys=['name','birth','death','source','notes'],formFields=values();
-     const publicFields=Object.fromEntries(publicKeys.filter(k=>typeof formFields[k]==='string').map(k=>[k,formFields[k]]));
-     let applied=0;
-     try{applied=w.GHOSN_APPLY_APPROVED?.([{personId:person.id,fields:publicFields}])||0}catch(_e){}
+     const review=await api('review',{personId:person.id});
      reviewer.hidden=false;
-     reviewer.textContent=applied?'تم اعتماد البيانات ونشرها وتحديث الاسم في الشجرة فورًا. تبقى صلات القرابة المعدلة معلّقة حتى التحقق من هوية الأشخاص.':'تم اعتماد البيانات ونشرها. حدّث الصفحة (Ctrl+F5) لرؤية الاسم المعتمد؛ صلات القرابة المعدلة معلّقة للتحقق.';
-   }catch(err){w.alert('تعذّر الاعتماد: '+err.message)}
+     if(review.changes&&review.changes.length){
+       reviewer.textContent='مراجعة نهائية قبل تغيير المشجر:\n'+review.changes.map(function(c){
+         return c.person+' — '+c.field+': '+c.before+' ← '+c.after;
+       }).join('\n')+'\n\nتحقق من كل صلة، ثم اضغط «تأكيد اعتماد العلاقات» لتنفيذ التغييرات.';
+     }else reviewer.textContent='لا توجد تغييرات في روابط القرابة. اضغط «تأكيد اعتماد البيانات» لإتمام النشر.';
+     reviewSnapshot=JSON.stringify({fields:values(),links:relationValues()});
+     reviewToken=review.token||'no-relation-changes';
+     this.textContent=review.hasChanges?'تأكيد اعتماد العلاقات':'تأكيد اعتماد البيانات';
+   }catch(err){reviewSnapshot=null;reviewToken=null;w.alert('تعذّر الاعتماد: '+err.message)}
    finally{this.disabled=false}
  };
  var focus=overlay.querySelector('input[name="name"]');if(focus)focus.focus();

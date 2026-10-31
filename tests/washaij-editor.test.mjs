@@ -2,10 +2,16 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-const records=new Map();
+const records=new Map(),versions=new Map();
+let seq=0;
 const store={
   async get(key){return records.has(key)?structuredClone(records.get(key)):null},
-  async setJSON(key,rec){records.set(key,structuredClone(rec))},
+  async getWithMetadata(key){return records.has(key)?{data:structuredClone(records.get(key)),etag:String(versions.get(key))}:null},
+  async setJSON(key,rec,options={}){
+    if(options.onlyIfNew&&records.has(key))return {modified:false};
+    if(options.onlyIfMatch&&String(versions.get(key))!==String(options.onlyIfMatch))return {modified:false};
+    records.set(key,structuredClone(rec));versions.set(key,++seq);return {modified:true};
+  },
   async list({prefix}){return {blobs:[...records.keys()].filter(key=>key.startsWith(prefix)).map(key=>({key}))}}
 };
 globalThis.__washaijTestStores={
@@ -83,4 +89,71 @@ test('the visitor explorer reads the approved API and hides record IDs',()=>{
   assert.ok(html.includes('washaij-no-record-identifiers'),'Record identifiers are hidden');
   assert.ok(!html.includes("'aria-label':`${n.name}، الرقم التعريفي"),'Accessibility label does not expose ID');
   assert.ok(!html.includes("b.children[1].textContent='#'+p.id"),'Search results do not show ID');
+});
+
+
+test('verified ID-based parent correction updates the child links after two-stage approval',async()=>{
+  records.clear();versions.clear();
+  const auth=await call('login','POST',{username:'admin',password:process.env.GHUSN_ADMIN_SECRET});
+  const cookie=auth.headers.get('set-cookie').split(';')[0];
+  const links={fatherId:'79',motherId:'43',childrenIds:[],spouseIds:['81'],lineageType:'marriage',childTypes:{}};
+  const saved=await call('save','POST',{personId:'80',originalName:'هيا الزاحم',fields:{name:'هيا الزاحم',source:'اختبار معزول'},links},cookie);
+  assert.equal(saved.status,200);
+  assert.equal(saved.data.draft.links.motherId,'43');
+  const unpublished=await call('public');
+  assert.equal(unpublished.data.relations.revision,'base');
+  assert.deepEqual(unpublished.data.relations.overrides,{});
+  const review=await call('review','POST',{personId:'80'},cookie);
+  assert.equal(review.status,200);
+  assert.ok(review.data.hasChanges);
+  assert.ok(review.data.changes.some(x=>x.person.includes('هيا')&&x.field==='الأم'));
+  assert.ok(review.data.changes.some(x=>x.person.includes('إبراهيم')&&x.field==='الأم'));
+  const withoutReview=await call('approve','POST',{personId:'80'},cookie);
+  assert.equal(withoutReview.status,409);
+  const approved=await call('approve','POST',{personId:'80',reviewToken:review.data.token},cookie);
+  assert.equal(approved.status,200);
+  assert.equal(approved.data.relationsApplied,true);
+  const publicData=await call('public');
+  assert.equal(publicData.data.relations.overrides['80'].motherId,'43');
+  assert.equal(publicData.data.relations.overrides['82'].motherId,'');
+  assert.equal(publicData.data.items.find(x=>x.personId==='80').fields.name,'هيا الزاحم');
+  assert.equal('mother' in publicData.data.items.find(x=>x.personId==='80').fields,false);
+});
+
+test('reject self-links, incompatible parent genders, missing IDs and obsolete reviews',async()=>{
+  records.clear();versions.clear();
+  const auth=await call('login','POST',{username:'admin',password:process.env.GHUSN_ADMIN_SECRET});
+  const cookie=auth.headers.get('set-cookie').split(';')[0];
+  const root={fatherId:'79',motherId:'60',childrenIds:['82'],spouseIds:['81'],lineageType:'marriage',childTypes:{}};
+  const save=async links=>call('save','POST',{personId:'80',fields:{name:'هيا الزاحم'},links},cookie);
+  for(const bad of [{...root,motherId:'80'},{...root,motherId:'81'},{...root,fatherId:'82'},{...root,motherId:'999999999997'},{...root,childrenIds:['81']}]){
+    assert.equal((await save(bad)).status,200);
+    const invalid=await call('review','POST',{personId:'80'},cookie);
+    assert.equal(invalid.status,409);
+  }
+  assert.equal((await save({...root,motherId:'43'})).status,200);
+  const review=await call('review','POST',{personId:'80'},cookie);
+  assert.equal(review.status,200);
+  assert.equal((await save({...root,motherId:'60'})).status,200);
+  const stale=await call('approve','POST',{personId:'80',reviewToken:review.data.token},cookie);
+  assert.equal(stale.status,409);
+  const publicData=await call('public');
+  assert.deepEqual(publicData.data.relations.overrides,{});
+});
+
+
+test('visual kinship editor binds internal IDs, requires review, and renders exceptions separately',()=>{
+  const editor=readFileSync(new URL('../washaij-site/ghusn-admin-live.js',import.meta.url),'utf8');
+  const core=readFileSync(new URL('../washaij-site/washaij-core.html',import.meta.url),'utf8');
+  assert.ok(editor.includes('gie-father-select'));
+  assert.ok(editor.includes('gie-mother-select'));
+  assert.ok(editor.includes('gie-add-child'));
+  assert.ok(editor.includes('gie-parent-family-preview'));
+  assert.ok(editor.includes("api('review'"));
+  assert.ok(editor.includes('reviewToken'));
+  assert.ok(editor.includes('readonly title='));
+  assert.ok(core.includes('GHOSN_APPLY_RELATIONS'));
+  assert.ok(core.includes('pairs.clear()'));
+  assert.ok(core.includes("kind:'special'"),'Non-marital children must not be drawn under marriage unions');
+  assert.ok(core.includes("g.kind==='other'||g.kind==='special'"),'Special children use distinct dashed lines');
 });
