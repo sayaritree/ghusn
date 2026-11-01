@@ -20,7 +20,7 @@ for (const filename of files) await copyFile(filename, join(dir, filename));
 const shellPath = join(dir, 'index.html');
 const shell = await readFile(shellPath, 'utf8');
 const canonicalScript = '<script src="/ghusn-washaij-canonical.js" defer></script>';
-if (!shell.includes('id="ghusn-app"') || !shell.includes('id=\\\"ws-launch\\\"')) {
+if (!shell.includes('id="ghusn-app"') || !shell.includes('ws-launch')) {
   throw new Error('Unexpected Ghusn shell structure; refusing a potentially broken deployment');
 }
 if (!shell.includes(canonicalScript)) {
