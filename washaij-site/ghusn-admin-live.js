@@ -364,11 +364,20 @@ async function edit(card,d,w){
       'تم اعتماد روابط القرابة ونشرها وإعادة بناء المشجر.':
       'تم اعتماد البيانات ونشرها بنجاح.')+
       (!refreshed?' تعذّر تحديث العرض فورًا'+(refreshError?' ('+refreshError+')':'')+'؛ حدّث الصفحة لرؤية البيانات المعتمدة.':'');
-   publishButton.textContent='تم الاعتماد والنشر';
-   publishButton.disabled=true;
+   // Confirmation is a status message, not a clickable but disabled button.
+   // Provide an active return-to-tree action after the server accepts approval.
+   publishButton.textContent='عرض المشجر بعد الاعتماد';
+   publishButton.disabled=false;
+ }
+ function showPublishedTree(){
+   // The data has already been approved: never make a second API call.
+   close();
+   const detail=d.getElementById('ghosnDetailModal');
+   if(detail)detail.hidden=true;
+   try{w.GHOSN_BRIDGE?.navigate?.(person.id)}catch(_err){}
  }
  publishButton.onclick=async function(){
-   if(publicationComplete)return;
+   if(publicationComplete){showPublishedTree();return;}
    this.disabled=true;
    try{
      const fingerprint=formFingerprint();
@@ -401,7 +410,7 @@ async function edit(card,d,w){
      reviewer.hidden=false;
      reviewer.textContent='لم يكتمل النشر: '+(err.message||String(err))+' — راجع البيانات ثم اضغط «اعتماد ونشر» مجددًا.';
      this.textContent='اعتماد ونشر';
-   }finally{this.disabled=publicationComplete}
+   }finally{this.disabled=false}
  };
  var focus=overlay.querySelector('input[name="name"]');if(focus)focus.focus();
 }

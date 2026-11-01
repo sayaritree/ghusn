@@ -167,7 +167,7 @@ test('publishing profile changes finishes once and changed kinship requires exac
   const publishHandler=editor.slice(start,end);
   function fixture(review){
     const code=[
-      "const calls=[],person={id:'80'};",
+      "const calls=[],person={id:'80'},detail={hidden:false};",
       "const publishButton={disabled:false,textContent:'اعتماد ونشر'};",
       "const reviewer={hidden:true,textContent:''};",
       "let pendingKinshipReview=null,publicationComplete=false,current='unchanged';",
@@ -179,27 +179,33 @@ test('publishing profile changes finishes once and changed kinship requires exac
       "if(action==='approve')return {relationsApplied:review.hasChanges};",
       "if(action==='public')return {items:[],relations:{overrides:{}}};",
       "throw Error('unexpected '+action);}",
-      "const w={GHOSN_APPLY_APPROVED(){},GHOSN_APPLY_RELATIONS(){}};",
+      "const w={GHOSN_APPLY_APPROVED(){},GHOSN_APPLY_RELATIONS(){},GHOSN_BRIDGE:{navigate(id){calls.push('navigate:'+id)}}};",
+      "const d={getElementById(id){return id==='ghosnDetailModal'?detail:null}};",
+      "function close(){calls.push('close')}",
       "function invalidatePendingApproval(){",
       "pendingKinshipReview=null;publicationComplete=false;",
       "publishButton.textContent='اعتماد ونشر';}",
       publishHandler,
-      "return {button:publishButton,reviewer,calls,setFingerprint(next){current=next}};"
+      "return {button:publishButton,reviewer,calls,detail,setFingerprint(next){current=next}};"
     ].join('\n');
     return new Function('review',code)(review);
   }
   const simple=fixture({hasChanges:false,changes:[],token:null});
   await simple.button.onclick();
   assert.deepEqual(simple.calls,['save','review','approve','public']);
-  assert.equal(simple.button.disabled,true);
-  assert.equal(simple.button.textContent,'تم الاعتماد والنشر');
+  assert.equal(simple.button.disabled,false);
+  assert.equal(simple.button.textContent,'عرض المشجر بعد الاعتماد');
   await simple.button.onclick();
-  assert.deepEqual(simple.calls,['save','review','approve','public'],'A completed publication cannot restart');
+  assert.deepEqual(simple.calls,['save','review','approve','public','close','navigate:80'],'Return to tree must not repeat approval');
+  assert.equal(simple.detail.hidden,true);
   const links=fixture({hasChanges:true,token:'signed-approval',changes:[{person:'هيا',field:'الأم',before:'قديمة',after:'جديدة'}]});
   await links.button.onclick();
   assert.deepEqual(links.calls,['save','review'],'No relation may be published on its preview click');
   assert.equal(links.button.textContent,'تأكيد اعتماد العلاقات');
   await links.button.onclick();
   assert.deepEqual(links.calls,['save','review','approve','public']);
-  assert.equal(links.button.disabled,true);
+  assert.equal(links.button.disabled,false);
+  assert.equal(links.button.textContent,'عرض المشجر بعد الاعتماد');
+  await links.button.onclick();
+  assert.deepEqual(links.calls,['save','review','approve','public','close','navigate:80'],'Confirmed kinship returns to updated tree without another write');
 });
