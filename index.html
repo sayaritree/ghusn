@@ -57,7 +57,7 @@ function attach(){
  }
  async function open(){previous=doc.activeElement;modal.hidden=false;doc.body.style.overflow='hidden';curtain.classList.remove('done');if(!hasOpened){hasOpened=true;frame.srcdoc=await applyApprovedWashaij(decodeUTF8(WASHAIJ_HTML_B64));}clearTimeout(timer);timer=setTimeout(()=>curtain.classList.add('done'),doc.defaultView.matchMedia('(prefers-reduced-motion: reduce)').matches?40:850);close.focus({preventScroll:true})}
  function exit(){modal.hidden=true;doc.body.style.overflow='';clearTimeout(timer);(previous&&previous.focus?previous:trigger).focus({preventScroll:true})}
- trigger.addEventListener('click',event=>{event.preventDefault();window.location.assign('https://washaij-sayaritree2.netlify.app/');});close.addEventListener('click',exit);
+ trigger.addEventListener('click',event=>{event.preventDefault();window.location.assign('https://washaij-sayaritree2.netlify.app/?utm_source=chatgpt.com');});close.addEventListener('click',exit);
  doc.addEventListener('keydown',event=>{if(event.key==='Escape'&&!modal.hidden){event.preventDefault();exit()}});
 }
  host.addEventListener('load',attach);
