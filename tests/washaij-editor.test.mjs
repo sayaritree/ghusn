@@ -157,3 +157,49 @@ test('visual kinship editor binds internal IDs, requires review, and renders exc
   assert.ok(core.includes("kind:'special'"),'Non-marital children must not be drawn under marriage unions');
   assert.ok(core.includes("g.kind==='other'||g.kind==='special'"),'Special children use distinct dashed lines');
 });
+
+
+test('publishing profile changes finishes once and changed kinship requires exactly one confirmation',async()=>{
+  const editor=readFileSync(new URL('../washaij-site/ghusn-admin-live.js',import.meta.url),'utf8');
+  const start=editor.indexOf(' async function publishApproved(');
+  const end=editor.indexOf('\n var focus=overlay.querySelector(',start);
+  assert.ok(start>0 && end>start,'The publish handler is present');
+  const publishHandler=editor.slice(start,end);
+  function fixture(review){
+    const code=[
+      "const calls=[],person={id:'80'};",
+      "const publishButton={disabled:false,textContent:'اعتماد ونشر'};",
+      "const reviewer={hidden:true,textContent:''};",
+      "let pendingKinshipReview=null,publicationComplete=false,current='unchanged';",
+      "function formFingerprint(){return current}",
+      "async function save(){calls.push('save')}",
+      "async function api(action,payload){",
+      "calls.push(action);",
+      "if(action==='review')return review;",
+      "if(action==='approve')return {relationsApplied:review.hasChanges};",
+      "if(action==='public')return {items:[],relations:{overrides:{}}};",
+      "throw Error('unexpected '+action);}",
+      "const w={GHOSN_APPLY_APPROVED(){},GHOSN_APPLY_RELATIONS(){}};",
+      "function invalidatePendingApproval(){",
+      "pendingKinshipReview=null;publicationComplete=false;",
+      "publishButton.textContent='اعتماد ونشر';}",
+      publishHandler,
+      "return {button:publishButton,reviewer,calls,setFingerprint(next){current=next}};"
+    ].join('\n');
+    return new Function('review',code)(review);
+  }
+  const simple=fixture({hasChanges:false,changes:[],token:null});
+  await simple.button.onclick();
+  assert.deepEqual(simple.calls,['save','review','approve','public']);
+  assert.equal(simple.button.disabled,true);
+  assert.equal(simple.button.textContent,'تم الاعتماد والنشر');
+  await simple.button.onclick();
+  assert.deepEqual(simple.calls,['save','review','approve','public'],'A completed publication cannot restart');
+  const links=fixture({hasChanges:true,token:'signed-approval',changes:[{person:'هيا',field:'الأم',before:'قديمة',after:'جديدة'}]});
+  await links.button.onclick();
+  assert.deepEqual(links.calls,['save','review'],'No relation may be published on its preview click');
+  assert.equal(links.button.textContent,'تأكيد اعتماد العلاقات');
+  await links.button.onclick();
+  assert.deepEqual(links.calls,['save','review','approve','public']);
+  assert.equal(links.button.disabled,true);
+});
