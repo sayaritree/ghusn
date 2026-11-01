@@ -64,3 +64,6 @@
   host.addEventListener('load',()=>setTimeout(wire,0));
   if(host.contentDocument?.readyState==='complete')setTimeout(wire,0);
 })();
+
+/* Review-only isolated portal adapter; no change to Ghusn data or analytics. */
+(()=>{const s=document.createElement('script');s.src='/ghusn-washaij-canonical.js';s.defer=true;document.head.appendChild(s);})();
