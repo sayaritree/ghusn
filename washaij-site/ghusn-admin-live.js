@@ -198,7 +198,7 @@ async function edit(card,d,w){
  '<div id="gie-verified-partners" class="gie-verified-list"></div></div>'+
  '<p class="gie-footnote">لا تُستبدل هوية شخص بمجرد تغيير اسمه. لإنشاء شخص جديد غير موجود في القاعدة، يُضاف أولًا بسجل مستقل ثم يُختار للربط.</p>'+
  '</section>'+
- '<p class="gie-footnote">«حفظ المسودة» للمراجعة فقط. «اعتماد ونشر» يقدّم مقارنة علاقات قبل التأكيد النهائي، ويرفض التضارب والدورات في النسب.</p>'+
+ '<p class="gie-footnote">«حفظ المسودة» للمراجعة فقط. «اعتماد ونشر» ينشر التعديلات الوصفية مباشرة، ويعرض مراجعة وتأكيدًا واحدًا فقط عند تغيير روابط الأنساب.</p>'+
  '<div id="gie-review" class="gie-review" hidden></div>'+
  '<div class="gie-actions"><button type="button" id="gie-review-button" class="gie-light">ماذا عدّلت؟</button>'+
  '<div class="gie-actions-end"><button type="button" id="gie-close" class="gie-light">إغلاق</button>'+
@@ -270,7 +270,7 @@ async function edit(card,d,w){
         wrapper.appendChild(pick);
       }
       var remove=d.createElement('button');remove.type='button';remove.className='gie-remove-link';remove.textContent='إزالة الصلة';
-      remove.onclick=function(){set.delete(id);delete linkChoice.childTypes[id];redrawLinks()};
+      remove.onclick=function(){set.delete(id);delete linkChoice.childTypes[id];redrawLinks();invalidatePendingApproval()};
       wrapper.appendChild(remove);box.appendChild(wrapper);
    }
    linkChoice.childrenIds.forEach(function(id){pill(kids,id,linkChoice.childrenIds,true)});
@@ -278,8 +278,8 @@ async function edit(card,d,w){
    if(!linkChoice.childrenIds.size)kids.textContent='لم تُحدَّد أبناء أو بنات';
    if(!linkChoice.spouseIds.size)partners.textContent='لم تُحدَّد علاقات زوجية';
  }
- addChild.onchange=function(){if(addChild.value){linkChoice.childrenIds.add(addChild.value);redrawLinks()}};
- addPartner.onchange=function(){if(addPartner.value){linkChoice.spouseIds.add(addPartner.value);redrawLinks()}};
+ addChild.onchange=function(){if(addChild.value){linkChoice.childrenIds.add(addChild.value);redrawLinks();invalidatePendingApproval()}};
+ addPartner.onchange=function(){if(addPartner.value){linkChoice.spouseIds.add(addPartner.value);redrawLinks();invalidatePendingApproval()}};
  redrawLinks();
  function relationValues(){
    return {fatherId:linkChoice.fatherId,motherId:linkChoice.motherId,
@@ -293,10 +293,30 @@ async function edit(card,d,w){
      JSON.stringify([...a.spouseIds].sort())===JSON.stringify([...b.spouseIds].sort())&&
      JSON.stringify(a.childTypes||{})===JSON.stringify(b.childTypes||{});
  }
- var reviewSnapshot=null,reviewToken=null;
+ // Only changed kinship links require a separate confirmation step.
+ var pendingKinshipReview=null,publicationComplete=false;
+ var publishButton=overlay.querySelector('#gie-publish');
+ function invalidatePendingApproval(){
+   if(publicationComplete){
+     publicationComplete=false;
+     publishButton.disabled=false;
+   }
+   if(pendingKinshipReview){
+     pendingKinshipReview=null;
+     reviewer.hidden=false;
+     reviewer.textContent='تغيّرت البيانات بعد المراجعة. يلزم عرض مقارنة الروابط مجددًا قبل اعتمادها.';
+   }
+   publishButton.textContent='اعتماد ونشر';
+ }
+ function formFingerprint(){
+   return JSON.stringify({fields:values(),links:relationValues()});
+ }
 
  function values(){return Object.fromEntries(new w.FormData(form).entries())}
  function close(){overlay.remove()}
+ // Any edit invalidates a pending kinship approval before another click.
+ form.addEventListener('input',invalidatePendingApproval);
+ form.addEventListener('change',invalidatePendingApproval);
  overlay.querySelector("#gie-close").onclick=close;
  overlay.querySelector("#gie-close-top").onclick=close;
  overlay.onmousedown=function(e){if(e.target===overlay)close()};
@@ -322,37 +342,66 @@ async function edit(card,d,w){
  }
  form.onsubmit=async function(e){
    e.preventDefault();var button=overlay.querySelector('#gie-save');button.disabled=true;
-   try{await save();reviewSnapshot=null;reviewToken=null;overlay.querySelector('#gie-publish').textContent='اعتماد ونشر'}
+   try{await save();invalidatePendingApproval()}
    catch(err){w.alert('تعذّر الحفظ: '+err.message)}
    finally{button.disabled=false}
  };
- overlay.querySelector('#gie-publish').onclick=async function(){
+ async function publishApproved(reviewToken){
+   const payload={personId:person.id};
+   if(reviewToken)payload.reviewToken=reviewToken;
+   const result=await api('approve',payload);
+   publicationComplete=true;
+   pendingKinshipReview=null;
+   let refreshed=false,refreshError='';
+   try{
+     const published=await api('public');
+     w.GHOSN_APPLY_APPROVED?.(published.items||[]);
+     w.GHOSN_APPLY_RELATIONS?.(published.relations);
+     refreshed=true;
+   }catch(err){refreshError=err.message||String(err)}
+   reviewer.hidden=false;
+   reviewer.textContent=(result.relationsApplied?
+      'تم اعتماد روابط القرابة ونشرها وإعادة بناء المشجر.':
+      'تم اعتماد البيانات ونشرها بنجاح.')+
+      (!refreshed?' تعذّر تحديث العرض فورًا'+(refreshError?' ('+refreshError+')':'')+'؛ حدّث الصفحة لرؤية البيانات المعتمدة.':'');
+   publishButton.textContent='تم الاعتماد والنشر';
+   publishButton.disabled=true;
+ }
+ publishButton.onclick=async function(){
+   if(publicationComplete)return;
    this.disabled=true;
    try{
-     const snapshot=JSON.stringify({fields:values(),links:relationValues()});
-     if(reviewSnapshot && reviewToken && snapshot===reviewSnapshot){
-       const result=await api('approve',{personId:person.id,reviewToken:reviewToken});
-       const publicData=await api('public');
-       w.GHOSN_APPLY_APPROVED?.(publicData.items||[]);
-       w.GHOSN_APPLY_RELATIONS?.(publicData.relations);
-       reviewer.hidden=false;
-       reviewer.textContent=result.relationsApplied?'تم اعتماد العلاقات بعد مراجعة المعرّفات، وأُعيد بناء المشجر.':'نُشرت البيانات المعتمدة في المشجر.';
-       reviewSnapshot=null;reviewToken=null;this.textContent='اعتماد ونشر';
+     const fingerprint=formFingerprint();
+     if(pendingKinshipReview){
+       if(fingerprint!==pendingKinshipReview.fingerprint){
+         invalidatePendingApproval();
+         return;
+       }
+       await publishApproved(pendingKinshipReview.token);
        return;
      }
      await save();
      const review=await api('review',{personId:person.id});
+     if(!review.hasChanges){
+       // Text and notes never require a repeated confirmation.
+       await publishApproved(review.token);
+       return;
+     }
+     if(!review.token||!Array.isArray(review.changes)||!review.changes.length){
+       throw Error('تعذّر إعداد مراجعة روابط القرابة بشكل موثوق.');
+     }
+     pendingKinshipReview={token:review.token,fingerprint:formFingerprint()};
      reviewer.hidden=false;
-     if(review.changes&&review.changes.length){
-       reviewer.textContent='مراجعة نهائية قبل تغيير المشجر:\n'+review.changes.map(function(c){
-         return c.person+' — '+c.field+': '+c.before+' ← '+c.after;
-       }).join('\n')+'\n\nتحقق من كل صلة، ثم اضغط «تأكيد اعتماد العلاقات» لتنفيذ التغييرات.';
-     }else reviewer.textContent='لا توجد تغييرات في روابط القرابة. اضغط «تأكيد اعتماد البيانات» لإتمام النشر.';
-     reviewSnapshot=JSON.stringify({fields:values(),links:relationValues()});
-     reviewToken=review.token||'no-relation-changes';
-     this.textContent=review.hasChanges?'تأكيد اعتماد العلاقات':'تأكيد اعتماد البيانات';
-   }catch(err){reviewSnapshot=null;reviewToken=null;w.alert('تعذّر الاعتماد: '+err.message)}
-   finally{this.disabled=false}
+     reviewer.textContent='مراجعة نهائية قبل تعديل الأنساب:\n'+review.changes.map(function(c){
+       return c.person+' — '+c.field+': '+c.before+' ← '+c.after;
+     }).join('\n')+'\n\nتأكد من صحة جميع الروابط ثم اضغط «تأكيد اعتماد العلاقات» مرة واحدة.';
+     this.textContent='تأكيد اعتماد العلاقات';
+   }catch(err){
+     pendingKinshipReview=null;
+     reviewer.hidden=false;
+     reviewer.textContent='لم يكتمل النشر: '+(err.message||String(err))+' — راجع البيانات ثم اضغط «اعتماد ونشر» مجددًا.';
+     this.textContent='اعتماد ونشر';
+   }finally{this.disabled=publicationComplete}
  };
  var focus=overlay.querySelector('input[name="name"]');if(focus)focus.focus();
 }
