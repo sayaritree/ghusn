@@ -1,0 +1,14 @@
+# Deployment-only branch for the independent WASHAIJ site.
+# The published directory contains only Washaij and its admin assets.
+[build]
+  command = "node scripts/sync-washaij-roster.mjs && node --test tests/washaij-editor.test.mjs"
+  publish = "washaij-site"
+
+[functions]
+  directory = "netlify/washaij-functions"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+[template.environment]
+  GHUSN_ADMIN_SECRET = "Set a unique strong administrator password of 18 characters or more. Do not share it."
